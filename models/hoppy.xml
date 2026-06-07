@@ -1,0 +1,67 @@
+<mujoco model="hoppy">
+    <compiler angle="radian" coordinate="local"/>
+
+    <option gravity="0 0 -9.81"
+            timestep="0.001"
+            integrator="RK4"
+            solver="Newton"
+            iterations="50"
+            tolerance="1e-8"/>
+
+    <default>
+        <joint damping="0.02" armature="0.0"/>
+        <geom friction="1.2 0.01 0.001"
+              solref="0.002 1"
+              solimp="0.95 0.99 0.001 0.5 2"/>
+    </default>
+
+    <worldbody>
+        <light pos="0 -2 3" dir="0 1 -1"/>
+        <camera name="main_camera" pos="1.6 -2.2 1.3" xyaxes="1 0 0 0 0.5 1"/>
+
+        <geom name="floor" type="plane" size="2 2 0.1" rgba="0.8 0.8 0.8 1"/>
+
+        <body name="gantry_yaw_body" pos="0 0 0.75">
+            <joint name="gantry_yaw" type="hinge" axis="0 0 1" damping="0.02" armature="0.01"/>
+            <geom name="yaw_hub" type="sphere" size="0.035" mass="0.05" rgba="0.1 0.1 0.1 1"/>
+
+            <body name="gantry_pitch_body" pos="0 0 0">
+                <joint name="gantry_pitch" type="hinge" axis="0 1 0" limited="true" range="-0.8 0.8"
+                       damping="0.05" armature="0.01"/>
+
+                <geom name="gantry_bar" type="capsule" fromto="-0.35 0 0 0.70 0 0"
+                      size="0.015" mass="0.25" rgba="0.1 0.1 0.1 1"/>
+
+                <geom name="counterweight" type="sphere" pos="-0.35 0 0"
+                      size="0.07" mass="2.3" rgba="0.2 0.2 0.8 1"/>
+
+                <body name="hip_body" pos="0.70 0 0">
+                    <joint name="hip" type="hinge" axis="0 1 0" limited="true" range="-1.8 1.8"
+                           damping="0.08" armature="0.02"/>
+
+                    <geom name="upper_leg" type="capsule" fromto="0 0 0 0 0 -0.22"
+                          size="0.02" mass="0.18" rgba="0.8 0.2 0.2 1"/>
+
+                    <body name="lower_leg_body" pos="0 0 -0.22">
+                        <joint name="knee" type="hinge" axis="0 1 0" limited="true" range="-2.4 0.2"
+                               damping="0.08" armature="0.02" stiffness="2.0" springref="-0.7"/>
+
+                        <geom name="lower_leg" type="capsule" fromto="0 0 0 0 0 -0.22"
+                              size="0.018" mass="0.15" rgba="0.2 0.7 0.2 1"/>
+
+                        <body name="foot_body" pos="0 0 -0.22">
+                            <geom name="foot" type="sphere" size="0.035" mass="0.05"
+                                  rgba="0.05 0.05 0.05 1"/>
+                            <site name="foot_site" pos="0 0 0" size="0.01" rgba="1 0 0 1"/>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+    </worldbody>
+
+    <actuator>
+        <motor name="hip_motor" joint="hip" gear="1" ctrllimited="true" ctrlrange="-6 6"/>
+        <motor name="knee_motor" joint="knee" gear="1" ctrllimited="true" ctrlrange="-6 6"/>
+    </actuator>
+</mujoco>
