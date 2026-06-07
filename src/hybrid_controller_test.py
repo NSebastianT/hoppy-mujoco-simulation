@@ -12,27 +12,29 @@ MODEL_PATH = ROOT / "models" / "hoppy.xml"
 FLIGHT = "FLIGHT"
 STANCE = "STANCE"
 
-L1 = 0.22
-L2 = 0.22
-DT = 0.001
 TORQUE_LIMIT = 12.0
+VELOCITY_FILTER_ALPHA = 0.15
+
+
+def joint_id(model, joint_name):
+    return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
 
 
 def set_joint(model, data, joint_name, value):
-    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
-    qpos_id = model.jnt_qposadr[joint_id]
+    jid = joint_id(model, joint_name)
+    qpos_id = model.jnt_qposadr[jid]
     data.qpos[qpos_id] = value
 
 
 def set_joint_velocity(model, data, joint_name, value):
-    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
-    qvel_id = model.jnt_dofadr[joint_id]
+    jid = joint_id(model, joint_name)
+    qvel_id = model.jnt_dofadr[jid]
     data.qvel[qvel_id] = value
 
 
 def get_joint_qpos(model, data, joint_name):
-    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
-    qpos_id = model.jnt_qposadr[joint_id]
+    jid = joint_id(model, joint_name)
+    qpos_id = model.jnt_qposadr[jid]
     return data.qpos[qpos_id]
 
 
@@ -52,57 +54,56 @@ def foot_in_contact(model, data):
     return False
 
 
-def foot_position(q):
-    hip, knee = q
-
-    x = -L1 * np.sin(hip) - L2 * np.sin(hip + knee)
-    z = -L1 * np.cos(hip) - L2 * np.cos(hip + knee)
-
-    return np.array([x, z])
+def site_position(model, data, site_name):
+    site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, site_name)
+    return data.site_xpos[site_id].copy()
 
 
-def foot_jacobian(q):
-    hip, knee = q
-
-    dx_dhip = -L1 * np.cos(hip) - L2 * np.cos(hip + knee)
-    dx_dknee = -L2 * np.cos(hip + knee)
-
-    dz_dhip = L1 * np.sin(hip) + L2 * np.sin(hip + knee)
-    dz_dknee = L2 * np.sin(hip + knee)
-
-    return np.array([
-        [dx_dhip, dx_dknee],
-        [dz_dhip, dz_dknee],
-    ])
+def body_position(model, data, body_name):
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+    return data.xpos[body_id].copy()
 
 
-def flight_control(q, qdot_est):
-    p = foot_position(q)
-    j = foot_jacobian(q)
-    pdot = j @ qdot_est
+def foot_jacobian_for_actuated_joints(model, data):
+    site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "foot_site")
 
-    p_ref = np.array([0.00, -0.38])
+    jacp = np.zeros((3, model.nv))
+    jacr = np.zeros((3, model.nv))
 
-    kp = np.diag([50.0, 80.0])
-    kd = np.diag([2.0, 3.0])
+    mujoco.mj_jacSite(model, data, jacp, jacr, site_id)
 
-    force = kp @ (p_ref - p) - kd @ pdot
-    tau = j.T @ force
+    hip_dof = model.jnt_dofadr[joint_id(model, "hip")]
+    knee_dof = model.jnt_dofadr[joint_id(model, "knee")]
+
+    return jacp[:, [hip_dof, knee_dof]]
+
+
+def flight_control(model, data, foot_velocity_est):
+    foot_pos = site_position(model, data, "foot_site")
+    hip_pos = body_position(model, data, "hip_body")
+
+    foot_ref = hip_pos + np.array([0.0, 0.0, -0.38])
+
+    kp = np.diag([20.0, 20.0, 80.0])
+    kd = np.diag([1.0, 1.0, 3.0])
+
+    desired_force = kp @ (foot_ref - foot_pos) - kd @ foot_velocity_est
+
+    jacobian = foot_jacobian_for_actuated_joints(model, data)
+    tau = jacobian.T @ desired_force
 
     return tau
 
 
-def stance_control(q, stance_time):
-    j = foot_jacobian(q)
-
+def stance_control(model, data, stance_time):
     stance_duration = 0.15
     phase = np.clip(stance_time / stance_duration, 0.0, 1.0)
 
     vertical_force = 80.0 * (0.4 + 0.6 * np.sin(np.pi * phase))
-    horizontal_force = 0.0
+    desired_force = np.array([0.0, 0.0, vertical_force])
 
-    desired_force = np.array([horizontal_force, vertical_force])
-    tau = j.T @ desired_force
+    jacobian = foot_jacobian_for_actuated_joints(model, data)
+    tau = jacobian.T @ desired_force
 
     return tau
 
@@ -119,13 +120,8 @@ def main():
 
     mujoco.mj_forward(model, data)
 
-    q_prev = np.array([
-        get_joint_qpos(model, data, "hip"),
-        get_joint_qpos(model, data, "knee"),
-    ])
-
-    qdot_est = np.zeros(2)
-    velocity_filter_alpha = 0.15
+    previous_foot_pos = site_position(model, data, "foot_site")
+    foot_velocity_est = np.zeros(3)
 
     state = STANCE if foot_in_contact(model, data) else FLIGHT
     stance_start_time = data.time if state == STANCE else None
@@ -143,15 +139,15 @@ def main():
 
         start_time = time.time()
 
-        while viewer.is_running() and time.time() - start_time < 15:
-            q = np.array([
-                get_joint_qpos(model, data, "hip"),
-                get_joint_qpos(model, data, "knee"),
-            ])
+        while viewer.is_running() and time.time() - start_time < 60:
+            foot_pos = site_position(model, data, "foot_site")
 
-            qdot_raw = (q - q_prev) / DT
-            qdot_est = (1.0 - velocity_filter_alpha) * qdot_est + velocity_filter_alpha * qdot_raw
-            q_prev = q.copy()
+            foot_velocity_raw = (foot_pos - previous_foot_pos) / model.opt.timestep
+            foot_velocity_est = (
+                (1.0 - VELOCITY_FILTER_ALPHA) * foot_velocity_est
+                + VELOCITY_FILTER_ALPHA * foot_velocity_raw
+            )
+            previous_foot_pos = foot_pos.copy()
 
             contact = foot_in_contact(model, data)
             new_state = STANCE if contact else FLIGHT
@@ -166,10 +162,10 @@ def main():
                     stance_start_time = None
 
             if state == FLIGHT:
-                tau = flight_control(q, qdot_est)
+                tau = flight_control(model, data, foot_velocity_est)
             else:
                 stance_time = data.time - stance_start_time
-                tau = stance_control(q, stance_time)
+                tau = stance_control(model, data, stance_time)
 
             tau = np.clip(tau, -TORQUE_LIMIT, TORQUE_LIMIT)
 
