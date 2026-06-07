@@ -61,7 +61,7 @@
     </worldbody>
 
     <actuator>
-        <motor name="hip_motor" joint="hip" gear="1" ctrllimited="true" ctrlrange="-6 6"/>
-        <motor name="knee_motor" joint="knee" gear="1" ctrllimited="true" ctrlrange="-6 6"/>
+        <motor name="hip_motor" joint="hip" gear="1" ctrllimited="true" ctrlrange="-12 12"/>
+        <motor name="knee_motor" joint="knee" gear="1" ctrllimited="true" ctrlrange="-12 12"/>
     </actuator>
 </mujoco>
