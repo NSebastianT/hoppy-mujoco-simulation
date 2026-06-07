@@ -37,8 +37,19 @@ def get_joint_qpos(model, data, joint_name):
     return data.qpos[qpos_id]
 
 
+def get_joint_qvel(model, data, joint_name):
+    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+    qvel_id = model.jnt_dofadr[joint_id]
+    return data.qvel[qvel_id]
+
+
 def geom_name(model, geom_id):
     return mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, geom_id)
+
+
+def foot_world_position(model, data):
+    site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "foot_site")
+    return data.site_xpos[site_id].copy()
 
 
 def foot_in_contact(model, data):
@@ -181,20 +192,25 @@ def run_simulation():
         data.ctrl[1] = tau[1]
 
         foot_pos = foot_position(q)
-        contact_force = normal_contact_force(model, data)
+        foot_world = foot_world_position(model, data)
 
         rows.append({
             "time": data.time,
             "state": 1 if state == STANCE else 0,
+            "gantry_pitch": get_joint_qpos(model, data, "gantry_pitch"),
+            "gantry_pitch_vel": get_joint_qvel(model, data, "gantry_pitch"),
             "hip": q[0],
             "knee": q[1],
             "hip_vel_est": qdot_est[0],
             "knee_vel_est": qdot_est[1],
             "foot_x": foot_pos[0],
             "foot_z": foot_pos[1],
+            "foot_world_x": foot_world[0],
+            "foot_world_y": foot_world[1],
+            "foot_world_z": foot_world[2],
             "tau_hip": tau[0],
             "tau_knee": tau[1],
-            "normal_force": contact_force,
+            "normal_force": normal_contact_force(model, data),
         })
 
         mujoco.mj_step(model, data)
@@ -218,15 +234,39 @@ def plot_results(rows):
 
     time = np.array([row["time"] for row in rows])
     state = np.array([row["state"] for row in rows])
+    gantry_pitch = np.array([row["gantry_pitch"] for row in rows])
+    gantry_pitch_vel = np.array([row["gantry_pitch_vel"] for row in rows])
     hip = np.array([row["hip"] for row in rows])
     knee = np.array([row["knee"] for row in rows])
     hip_vel = np.array([row["hip_vel_est"] for row in rows])
     knee_vel = np.array([row["knee_vel_est"] for row in rows])
     foot_x = np.array([row["foot_x"] for row in rows])
     foot_z = np.array([row["foot_z"] for row in rows])
+    foot_world_z = np.array([row["foot_world_z"] for row in rows])
     tau_hip = np.array([row["tau_hip"] for row in rows])
     tau_knee = np.array([row["tau_knee"] for row in rows])
     normal_force = np.array([row["normal_force"] for row in rows])
+
+    plt.figure()
+    plt.plot(time, gantry_pitch)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Gantry pitch [rad]")
+    plt.grid(True)
+    plt.savefig(PLOTS_DIR / "gantry_pitch.png", dpi=200)
+
+    plt.figure()
+    plt.plot(time, gantry_pitch_vel)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Gantry pitch velocity [rad/s]")
+    plt.grid(True)
+    plt.savefig(PLOTS_DIR / "gantry_pitch_velocity.png", dpi=200)
+
+    plt.figure()
+    plt.plot(time, foot_world_z)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Foot world height [m]")
+    plt.grid(True)
+    plt.savefig(PLOTS_DIR / "foot_world_z.png", dpi=200)
 
     plt.figure()
     plt.plot(time, hip, label="hip")
@@ -250,7 +290,7 @@ def plot_results(rows):
     plt.plot(time, foot_x, label="foot x")
     plt.plot(time, foot_z, label="foot z")
     plt.xlabel("Time [s]")
-    plt.ylabel("Foot position [m]")
+    plt.ylabel("Foot position relative to hip [m]")
     plt.legend()
     plt.grid(True)
     plt.savefig(PLOTS_DIR / "foot_position.png", dpi=200)
