@@ -25,6 +25,12 @@ def set_joint(model, data, joint_name, value):
     data.qpos[qpos_id] = value
 
 
+def set_joint_velocity(model, data, joint_name, value):
+    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+    qvel_id = model.jnt_dofadr[joint_id]
+    data.qvel[qvel_id] = value
+
+
 def get_joint_qpos(model, data, joint_name):
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
     qpos_id = model.jnt_qposadr[joint_id]
@@ -125,9 +131,12 @@ def run_simulation():
     dt = model.opt.timestep
     sim_time = 5.0
 
-    set_joint(model, data, "gantry_pitch", 0.55)
+    set_joint(model, data, "gantry_pitch", 0.50)
     set_joint(model, data, "hip", 0.35)
     set_joint(model, data, "knee", -0.70)
+
+    set_joint_velocity(model, data, "gantry_pitch", 1.0)
+
     mujoco.mj_forward(model, data)
 
     q_prev = np.array([

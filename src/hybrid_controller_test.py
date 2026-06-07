@@ -24,6 +24,12 @@ def set_joint(model, data, joint_name, value):
     data.qpos[qpos_id] = value
 
 
+def set_joint_velocity(model, data, joint_name, value):
+    joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+    qvel_id = model.jnt_dofadr[joint_id]
+    data.qvel[qvel_id] = value
+
+
 def get_joint_qpos(model, data, joint_name):
     joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
     qpos_id = model.jnt_qposadr[joint_id]
@@ -105,9 +111,12 @@ def main():
     model = mujoco.MjModel.from_xml_path(str(MODEL_PATH))
     data = mujoco.MjData(model)
 
-    set_joint(model, data, "gantry_pitch", 0.55)
+    set_joint(model, data, "gantry_pitch", 0.50)
     set_joint(model, data, "hip", 0.35)
     set_joint(model, data, "knee", -0.70)
+
+    set_joint_velocity(model, data, "gantry_pitch", 1.0)
+
     mujoco.mj_forward(model, data)
 
     q_prev = np.array([
@@ -134,7 +143,7 @@ def main():
 
         start_time = time.time()
 
-        while viewer.is_running() and time.time() - start_time < 10:
+        while viewer.is_running() and time.time() - start_time < 15:
             q = np.array([
                 get_joint_qpos(model, data, "hip"),
                 get_joint_qpos(model, data, "knee"),
