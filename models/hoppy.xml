@@ -10,9 +10,9 @@
 
     <default>
         <joint damping="0.02" armature="0.0"/>
-        <geom friction="1.2 0.01 0.001"
-              solref="0.002 1"
-              solimp="0.95 0.99 0.001 0.5 2"/>
+        <geom friction="1.5 0.02 0.001"
+              solref="0.01 1"
+              solimp="0.85 0.95 0.01 0.5 2"/>
     </default>
 
     <worldbody>
@@ -21,19 +21,18 @@
 
         <geom name="floor" type="plane" size="2 2 0.1" rgba="0.8 0.8 0.8 1"/>
 
-        <body name="gantry_yaw_body" pos="0 0 0.75">
-            <joint name="gantry_yaw" type="hinge" axis="0 0 1" damping="0.02" armature="0.01"/>
+        <body name="gantry_yaw_body" pos="0 0 0.48">
             <geom name="yaw_hub" type="sphere" size="0.035" mass="0.05" rgba="0.1 0.1 0.1 1"/>
 
             <body name="gantry_pitch_body" pos="0 0 0">
-                <joint name="gantry_pitch" type="hinge" axis="0 1 0" limited="true" range="-1.4 1.0"
-                    damping="0.05" armature="0.01"/>
+                    <joint name="gantry_pitch" type="hinge" axis="0 1 0" limited="true" range="-0.15 0.30"
+                       damping="0.80" armature="0.15"/>
 
                 <geom name="gantry_bar" type="capsule" fromto="-0.35 0 0 0.70 0 0"
                       size="0.015" mass="0.25" rgba="0.1 0.1 0.1 1"/>
 
                 <geom name="counterweight" type="sphere" pos="-0.35 0 0"
-                      size="0.07" mass="2.3" rgba="0.2 0.2 0.8 1"/>
+                      size="0.07" mass="1.00" rgba="0.2 0.2 0.8 1"/>
 
                 <body name="hip_body" pos="0.70 0 0">
                     <joint name="hip" type="hinge" axis="1 0 0" limited="true" range="-1.8 1.8"
@@ -64,7 +63,7 @@
     </worldbody>
 
     <actuator>
-        <motor name="hip_motor" joint="hip" gear="1" ctrllimited="true" ctrlrange="-12 12"/>
-        <motor name="knee_motor" joint="knee" gear="1" ctrllimited="true" ctrlrange="-12 12"/>
+        <motor name="hip_motor" joint="hip" gear="1" ctrllimited="true" ctrlrange="-35 35"/>
+        <motor name="knee_motor" joint="knee" gear="1" ctrllimited="true" ctrlrange="-35 35"/>
     </actuator>
 </mujoco>

@@ -12,8 +12,11 @@ MODEL_PATH = ROOT / "models" / "hoppy.xml"
 FLIGHT = "FLIGHT"
 STANCE = "STANCE"
 
-TORQUE_LIMIT = 12.0
+TORQUE_LIMIT = 25.0
 VELOCITY_FILTER_ALPHA = 0.15
+
+MIN_STANCE_TIME = 0.14
+MIN_FLIGHT_TIME = 0.12
 
 
 def joint_id(model, joint_name):
@@ -78,45 +81,98 @@ def foot_jacobian_for_actuated_joints(model, data):
     return jacp[:, [hip_dof, knee_dof]]
 
 
+def joint_space_pd(
+    model,
+    data,
+    hip_ref,
+    knee_ref,
+    hip_vel_ref=0.0,
+    knee_vel_ref=0.0,
+    kp_hip=45.0,
+    kd_hip=4.5,
+    kp_knee=38.0,
+    kd_knee=4.0,
+):
+    hip = get_joint_qpos(model, data, "hip")
+    knee = get_joint_qpos(model, data, "knee")
+
+    hip_dof = model.jnt_dofadr[joint_id(model, "hip")]
+    knee_dof = model.jnt_dofadr[joint_id(model, "knee")]
+
+    hip_vel = data.qvel[hip_dof]
+    knee_vel = data.qvel[knee_dof]
+
+    tau_hip = kp_hip * (hip_ref - hip) + kd_hip * (hip_vel_ref - hip_vel)
+    tau_knee = kp_knee * (knee_ref - knee) + kd_knee * (knee_vel_ref - knee_vel)
+
+    return np.array([tau_hip, tau_knee])
+
+
 def flight_control(model, data, foot_velocity_est):
-    foot_pos = site_position(model, data, "foot_site")
-    hip_pos = body_position(model, data, "hip_body")
+    hip_ref = 0.45
+    knee_ref = -0.80
 
-    foot_ref = hip_pos + np.array([0.0, 0.0, -0.38])
-
-    kp = np.diag([20.0, 20.0, 80.0])
-    kd = np.diag([1.0, 1.0, 3.0])
-
-    desired_force = kp @ (foot_ref - foot_pos) - kd @ foot_velocity_est
-
-    jacobian = foot_jacobian_for_actuated_joints(model, data)
-    tau = jacobian.T @ desired_force
-
-    return tau
+    return joint_space_pd(
+        model,
+        data,
+        hip_ref,
+        knee_ref,
+        kp_hip=8.0,
+        kd_hip=1.0,
+        kp_knee=6.0,
+        kd_knee=1.0,
+    )
 
 
 def stance_control(model, data, stance_time):
-    stance_duration = 0.15
+    stance_duration = 0.35
     phase = np.clip(stance_time / stance_duration, 0.0, 1.0)
 
-    vertical_force = 80.0 * (0.4 + 0.6 * np.sin(np.pi * phase))
-    desired_force = np.array([0.0, 0.0, vertical_force])
+    compression_phase = 0.35
 
-    jacobian = foot_jacobian_for_actuated_joints(model, data)
-    tau = jacobian.T @ desired_force
+    hip_start = 0.45
+    knee_start = -0.80
 
-    return tau
+    hip_compressed = 0.35
+    knee_compressed = -1.05
+
+    hip_extended = 1.05
+    knee_extended = -0.30
+
+    if phase < compression_phase:
+        local_phase = phase / compression_phase
+        smooth_phase = 3.0 * local_phase**2 - 2.0 * local_phase**3
+
+        hip_ref = hip_start + (hip_compressed - hip_start) * smooth_phase
+        knee_ref = knee_start + (knee_compressed - knee_start) * smooth_phase
+    else:
+        local_phase = (phase - compression_phase) / (1.0 - compression_phase)
+        smooth_phase = 3.0 * local_phase**2 - 2.0 * local_phase**3
+
+        hip_ref = hip_compressed + (hip_extended - hip_compressed) * smooth_phase
+        knee_ref = knee_compressed + (knee_extended - knee_compressed) * smooth_phase
+
+    return joint_space_pd(
+        model,
+        data,
+        hip_ref,
+        knee_ref,
+        kp_hip=50.0,
+        kd_hip=5.0,
+        kp_knee=45.0,
+        kd_knee=4.5,
+    )
 
 
 def main():
     model = mujoco.MjModel.from_xml_path(str(MODEL_PATH))
     data = mujoco.MjData(model)
 
-    set_joint(model, data, "gantry_pitch", 0.50)
+    set_joint(model, data, "gantry_pitch", 0.00)
     set_joint(model, data, "hip", 0.35)
     set_joint(model, data, "knee", -0.70)
 
-    set_joint_velocity(model, data, "gantry_pitch", 1.0)
+    set_joint_velocity(model, data, "gantry_pitch", 0.50)
 
     mujoco.mj_forward(model, data)
 
@@ -124,7 +180,11 @@ def main():
     foot_velocity_est = np.zeros(3)
 
     state = STANCE if foot_in_contact(model, data) else FLIGHT
+    state_start_time = data.time
     stance_start_time = data.time if state == STANCE else None
+
+    max_abs_tau_hip = 0.0
+    max_abs_tau_knee = 0.0
 
     print(f"Initial state: {state}")
 
@@ -150,16 +210,19 @@ def main():
             previous_foot_pos = foot_pos.copy()
 
             contact = foot_in_contact(model, data)
-            new_state = STANCE if contact else FLIGHT
+            time_in_state = data.time - state_start_time
 
-            if new_state != state:
-                print(f"{state} -> {new_state} at t = {data.time:.3f} s")
-                state = new_state
+            if state == FLIGHT and contact and time_in_state >= MIN_FLIGHT_TIME:
+                print(f"FLIGHT -> STANCE at t = {data.time:.3f} s")
+                state = STANCE
+                state_start_time = data.time
+                stance_start_time = data.time
 
-                if state == STANCE:
-                    stance_start_time = data.time
-                else:
-                    stance_start_time = None
+            elif state == STANCE and (not contact) and time_in_state >= MIN_STANCE_TIME:
+                print(f"STANCE -> FLIGHT at t = {data.time:.3f} s")
+                state = FLIGHT
+                state_start_time = data.time
+                stance_start_time = None
 
             if state == FLIGHT:
                 tau = flight_control(model, data, foot_velocity_est)
@@ -169,6 +232,9 @@ def main():
 
             tau = np.clip(tau, -TORQUE_LIMIT, TORQUE_LIMIT)
 
+            max_abs_tau_hip = max(max_abs_tau_hip, abs(tau[0]))
+            max_abs_tau_knee = max(max_abs_tau_knee, abs(tau[1]))
+
             data.ctrl[0] = tau[0]
             data.ctrl[1] = tau[1]
 
@@ -176,8 +242,9 @@ def main():
             viewer.sync()
             time.sleep(0.003)
 
+        print(f"Max |tau_hip| commanded: {max_abs_tau_hip:.3f} Nm")
+    print(f"Max |tau_knee| commanded: {max_abs_tau_knee:.3f} Nm")
     print("Hybrid controller test finished.")
-
 
 if __name__ == "__main__":
     main()
