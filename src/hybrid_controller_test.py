@@ -12,10 +12,11 @@ MODEL_PATH = ROOT / "models" / "hoppy.xml"
 FLIGHT = "FLIGHT"
 STANCE = "STANCE"
 
-TORQUE_LIMIT = 25.0
+TORQUE_LIMIT = 35.0
 VELOCITY_FILTER_ALPHA = 0.15
 
-MIN_STANCE_TIME = 0.22
+MIN_STANCE_TIME = 0.10
+MAX_STANCE_TIME = 0.28
 MIN_FLIGHT_TIME = 0.16
 
 
@@ -129,7 +130,7 @@ def stance_control(model, data, stance_time):
     ramp = np.clip(stance_time / ramp_time, 0.0, 1.0)
     ramp = 3.0 * ramp**2 - 2.0 * ramp**3
 
-    vertical_push_force = 90.0 * ramp
+    vertical_push_force = 220.0 * ramp
 
     desired_foot_force = np.array([0.0, 0.0, -vertical_push_force])
     tau_push = J.T @ desired_foot_force
@@ -205,7 +206,10 @@ def main():
                 state_start_time = data.time
                 stance_start_time = data.time
 
-            elif state == STANCE and (not contact) and time_in_state >= MIN_STANCE_TIME:
+            elif state == STANCE and (
+                ((not contact) and time_in_state >= MIN_STANCE_TIME)
+                or time_in_state >= MAX_STANCE_TIME
+            ):
                 print(f"STANCE -> FLIGHT at t = {data.time:.3f} s")
                 state = FLIGHT
                 state_start_time = data.time
