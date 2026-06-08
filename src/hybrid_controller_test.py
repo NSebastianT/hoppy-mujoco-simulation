@@ -19,6 +19,17 @@ MIN_STANCE_TIME = 0.10
 MAX_STANCE_TIME = 0.28
 MIN_FLIGHT_TIME = 0.16
 
+TARGET_HIP_APEX_Z = 0.48
+PUSH_FORCE_MIN = 180.0
+PUSH_FORCE_MAX = 420.0
+PUSH_FORCE_GAIN = 650.0
+
+CONTROL_MEMORY = {
+    "push_force": 220.0,
+    "flight_apex_z": 0.0,
+    "hop_count": 0,
+}
+
 
 def joint_id(model, joint_name):
     return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
@@ -68,6 +79,9 @@ def site_position(model, data, site_name):
     site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, site_name)
     return data.site_xpos[site_id].copy()
 
+def body_position(model, data, body_name):
+    body_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, body_name)
+    return data.xpos[body_id].copy()
 
 def foot_jacobian_for_actuated_joints(model, data):
     site_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "foot_site")
@@ -130,13 +144,13 @@ def stance_control(model, data, stance_time):
     ramp = np.clip(stance_time / ramp_time, 0.0, 1.0)
     ramp = 3.0 * ramp**2 - 2.0 * ramp**3
 
-    vertical_push_force = 220.0 * ramp
+    vertical_push_force = CONTROL_MEMORY["push_force"] * ramp
 
     desired_foot_force = np.array([0.0, 0.0, -vertical_push_force])
     tau_push = J.T @ desired_foot_force
 
     hip_ref = 0.45
-    knee_ref = -0.80
+    knee_ref = -0.90
 
     tau_posture = joint_space_pd(
         model,
@@ -145,8 +159,8 @@ def stance_control(model, data, stance_time):
         knee_ref,
         kp_hip=10.0,
         kd_hip=1.5,
-        kp_knee=8.0,
-        kd_knee=1.5,
+        kp_knee=12.0,
+        kd_knee=1.8,
     )
 
     return tau_push + tau_posture
@@ -174,6 +188,9 @@ def main():
     max_abs_tau_hip = 0.0
     max_abs_tau_knee = 0.0
 
+    hip_body_pos = body_position(model, data, "hip_body")
+    CONTROL_MEMORY["flight_apex_z"] = hip_body_pos[2]
+
     print(f"Initial state: {state}")
 
     with mujoco.viewer.launch_passive(model, data) as viewer:
@@ -200,7 +217,32 @@ def main():
             contact = foot_in_contact(model, data)
             time_in_state = data.time - state_start_time
 
+            hip_body_z = body_position(model, data, "hip_body")[2]
+
+            if state == FLIGHT:
+                CONTROL_MEMORY["flight_apex_z"] = max(
+                    CONTROL_MEMORY["flight_apex_z"],
+                    hip_body_z,
+                )
+
             if state == FLIGHT and contact and time_in_state >= MIN_FLIGHT_TIME:
+                if CONTROL_MEMORY["hop_count"] > 0:
+                    height_error = TARGET_HIP_APEX_Z - CONTROL_MEMORY["flight_apex_z"]
+
+                    new_push_force = (
+                        CONTROL_MEMORY["push_force"]
+                        + PUSH_FORCE_GAIN * height_error
+                    )
+
+                    CONTROL_MEMORY["push_force"] = float(
+                        np.clip(new_push_force, PUSH_FORCE_MIN, PUSH_FORCE_MAX)
+                    )
+
+                    print(
+                        f"apex_z = {CONTROL_MEMORY['flight_apex_z']:.3f} m, "
+                        f"push_force = {CONTROL_MEMORY['push_force']:.1f} N"
+                    )
+
                 print(f"FLIGHT -> STANCE at t = {data.time:.3f} s")
                 state = STANCE
                 state_start_time = data.time
@@ -211,6 +253,10 @@ def main():
                 or time_in_state >= MAX_STANCE_TIME
             ):
                 print(f"STANCE -> FLIGHT at t = {data.time:.3f} s")
+
+                CONTROL_MEMORY["hop_count"] += 1
+                CONTROL_MEMORY["flight_apex_z"] = hip_body_z
+
                 state = FLIGHT
                 state_start_time = data.time
                 stance_start_time = None
