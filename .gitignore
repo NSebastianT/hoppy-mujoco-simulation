@@ -222,6 +222,7 @@ cad_files.txt
 # Project local files (reference docs / extra venvs — not versioned)
 rubrica.pdf
 HOPPY_Technical_Guideline.pdf
+BOM - HOPPY.xlsx
 .venv-py312/
 
 # Official CAD source archive (17 MB; meshes are decimated into assets/ instead)
