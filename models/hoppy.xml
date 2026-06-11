@@ -65,7 +65,7 @@
                           rgba="0.05 0.05 0.05 1"/>
 
                     <geom name="official_upper_leg_visual" type="mesh" mesh="official_link3_mesh"
-                          pos="0 0 -0.11"
+                          pos="0 0 -0.17"
                           rgba="0.9 0.8 0.1 0.90"
                           contype="0" conaffinity="0" density="0"/>
 
@@ -80,7 +80,7 @@
                                damping="0.08" armature="0.001"/>
 
                         <geom name="official_lower_leg_visual" type="mesh" mesh="official_link4_mesh"
-                              pos="0 0 -0.055"
+                              pos="0 0 -0.080"
                               rgba="0.1 0.7 0.1 0.90"
                               contype="0" conaffinity="0" density="0"/>
 
@@ -104,4 +104,9 @@
         <motor name="hip_motor" joint="hip" gear="1" ctrllimited="true" ctrlrange="-35 35"/>
         <motor name="knee_motor" joint="knee" gear="1" ctrllimited="true" ctrlrange="-35 35"/>
     </actuator>
+
+    <keyframe>
+        <!-- Natural standing pose with the foot resting on the floor -->
+        <key name="home" qpos="0 0.025 -0.10"/>
+    </keyframe>
 </mujoco>

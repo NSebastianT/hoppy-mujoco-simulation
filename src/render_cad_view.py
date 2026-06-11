@@ -42,9 +42,7 @@ def main():
     for n in HIDE_GEOMS:
         model.geom_rgba[gid(model, n)][3] = 0.0
 
-    for jn, val in [("gantry_pitch", 0.0), ("hip", 0.025), ("knee", -0.10)]:
-        j = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, jn)
-        data.qpos[model.jnt_qposadr[j]] = val
+    mujoco.mj_resetDataKeyframe(model, data, 0)  # "home" standing pose (foot on floor)
     mujoco.mj_forward(model, data)
 
     renderer = mujoco.Renderer(model, height=HEIGHT, width=WIDTH)

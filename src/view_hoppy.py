@@ -19,9 +19,7 @@ def main():
     model = mujoco.MjModel.from_xml_path(str(MODEL_PATH))
     data = mujoco.MjData(model)
 
-    set_joint(model, data, "gantry_pitch", -0.10)
-    set_joint(model, data, "hip", 0.35)
-    set_joint(model, data, "knee", -0.70)
+    mujoco.mj_resetDataKeyframe(model, data, 0)  # "home" standing pose (foot on floor)
 
     mujoco.mj_forward(model, data)
 
