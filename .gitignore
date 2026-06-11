@@ -223,3 +223,6 @@ cad_files.txt
 rubrica.pdf
 HOPPY_Technical_Guideline.pdf
 .venv-py312/
+
+# Generated offscreen renders (videos/images produced by src/render_*.py)
+results/renders/

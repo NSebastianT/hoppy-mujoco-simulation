@@ -391,6 +391,32 @@ Run the logged simulation:
 python src\run_logged_simulation.py
 ```
 
+## Headless rendering (videos, cross-platform)
+
+The interactive viewer (`view_hoppy.py`, `hybrid_controller_test.py`) opens a
+GLFW window. That works on Windows and macOS, but crashes on some Linux Intel
+Xe / hybrid-GPU drivers. The render scripts below sidestep that: they render
+**offscreen** to an MP4, so they work on any OS and produce a shareable video.
+
+They auto-pick the GL backend (EGL on Linux, default on Windows/macOS) and use
+the bundled `imageio-ffmpeg`, so **no system ffmpeg install is needed**.
+
+Render the hopping simulation:
+
+```bat
+python src\render_simulation.py
+```
+
+Render a 360 spin of the official CAD form (CAD meshes opaque, primitives
+hidden):
+
+```bat
+python src\render_cad_view.py
+```
+
+Both write to `results/renders/` (gitignored). Optional args:
+`python src\render_simulation.py out.mp4 8` (output path, seconds).
+
 ## How to regenerate CAD meshes
 
 FreeCAD is used to export the official STEP assemblies to simplified STL meshes.
