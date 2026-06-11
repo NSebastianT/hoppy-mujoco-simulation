@@ -124,9 +124,17 @@ Comandos:
     .venv-py312/bin/python src/run_logged_simulation.py # log y graficas en results/
     .venv-py312/bin/python src/run_cad_logged.py        # CSV y graficas del CAD -> results/logs y results/plots
 
-El visor interactivo (view_hoppy, hybrid_controller_test) abre ventana GLFW y
-crashea en Linux con driver Intel Xe; en Windows/Mac si funciona. Por eso en
-Linux usamos los renders offscreen, que generan un mp4.
+Demo EN VIVO del CAD saltando (ventana interactiva de MuJoCo):
+
+    # Windows / macOS:
+    .venv-py312/bin/python src/view_cad_hop.py
+
+    # Linux (hay que forzar la NVIDIA; con Intel Xe el visor crashea):
+    __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia .venv-py312/bin/python src/view_cad_hop.py
+
+El visor interactivo abre ventana GLFW. En Linux con el GL de Intel Xe crashea,
+por eso en Linux se fuerza la GPU NVIDIA (PRIME offload) con las variables de
+arriba; ya probado y funciona. Para grabar mp4 se usan los renders offscreen.
 
 ## Ramas
 
