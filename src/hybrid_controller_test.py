@@ -12,7 +12,9 @@ MODEL_PATH = ROOT / "models" / "hoppy.xml"
 FLIGHT = "FLIGHT"
 STANCE = "STANCE"
 
-TORQUE_LIMIT = 35.0
+# Output torque limit per joint [hip, knee], from the goBilda 5202 driven by the
+# VNH5019 at its 30 A peak (0.405 N*m/A at the output, scaled by gear ratio).
+TORQUE_LIMIT = np.array([12.2, 13.0])
 VELOCITY_FILTER_ALPHA = 0.15
 
 MIN_STANCE_TIME = 0.10
