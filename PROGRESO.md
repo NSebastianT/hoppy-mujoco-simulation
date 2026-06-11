@@ -45,8 +45,13 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
 - [x] Bucle a 1 kHz y maquina FLIGHT/STANCE basada en contacto.
 - [x] Control cartesiano en vuelo (Jacobiano transpuesto, PD).
 - [x] Control de fuerza en apoyo (GRF via Jacobiano transpuesto).
-- [ ] Subir la energia del salto: hoy salta ~3 cm y el controlador usa solo 5-6
-      de 35 N·m, asi que hay margen. Se ajustara empuje/timing.
+- [ ] Subir la energia del salto. Diagnostico: subir la fuerza de empuje NO
+      sube el salto (el pitch del boom se topa en ~0.054 rad, el cuerpo sube
+      ~4 cm con cualquier fuerza). El problema es que la pierna se extiende y
+      pierde contacto antes de transferir impulso al boom -> rebotes rapidos y
+      bajos. Hay que rediseniar el control de stance: mantener contacto mientras
+      se acelera el cuerpo, con perfil de fuerza Bezier sobre ~0.15 s y timing
+      de la maquina de estados acorde.
 - [ ] Perfil de fuerza justificado (Bezier) y transicion suave alpha.
 
 ### Fase 5 - Sensores y procesamiento (15 pts) -- parcial
