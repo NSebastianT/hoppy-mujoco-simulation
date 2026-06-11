@@ -116,8 +116,9 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
 
     z_values = z_values[:step + 1]
     yaw_values = yaw_values[:step + 1]
-    yaw_delta = float(yaw_values[-1] - initial_yaw)
-    yaw_steps = np.diff(yaw_values)
+    yaw_unwrapped = np.unwrap(yaw_values)
+    yaw_delta = float(yaw_unwrapped[-1] - initial_yaw)
+    yaw_steps = np.diff(yaw_unwrapped)
     yaw_progress = float(np.sum(np.abs(yaw_steps)))
     yaw_monotonic_fraction = 1.0
     if yaw_steps.size and abs(yaw_delta) > 1e-9:
@@ -138,8 +139,8 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
         "bias_joint2": initial_bias_joint2,
         "yaw_delta": yaw_delta,
         "yaw_progress": yaw_progress,
-        "yaw_min": float(np.min(yaw_values)),
-        "yaw_max": float(np.max(yaw_values)),
+        "yaw_min": float(np.min(yaw_unwrapped)),
+        "yaw_max": float(np.max(yaw_unwrapped)),
         "yaw_monotonic_fraction": yaw_monotonic_fraction,
         "startup_qvel_max": startup_qvel_max,
         "first_hop_peak": float(first_hop_peak),

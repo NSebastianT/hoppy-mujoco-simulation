@@ -54,9 +54,14 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
       de la maquina de estados acorde.
 - [x] Perfil de fuerza Bezier en stance, transicion suave alpha de 10 ms y PD de pierna mas fuerte en el CAD.
 
-### Fase 5 - Sensores y procesamiento (15 pts) -- parcial
-- [x] Estimacion de velocidad por derivada filtrada (no se usa qvel directo).
-- [ ] Emulacion de encoder (28 CPR) y juego completo de graficas con analisis.
+### Fase 5 - Sensores y procesamiento (15 pts) -- completa
+- [x] Emulacion de encoder goBilda 5202: joint3/joint4 cuantizados a
+      751.8 cuentas/rev en el eje de salida.
+- [x] Estimacion de velocidad por derivada numerica filtrada; el PD del CAD ya
+      no usa `qvel` directo para el feedback de velocidad.
+- [x] Logging del CAD en `results/logs/cad_states.csv` y graficas regenerables
+      en `results/plots/` con posiciones, velocidades, contacto, torques y
+      estado hibrido.
 
 ## Datos del motor (para el reporte)
 
@@ -105,8 +110,11 @@ El profe quiere ver el modelo real saltando. Pasos:
        monotonicidad de yaw 1.000, mesh_min_z ~0.112 m,
        estable y dentro de torque. El pie sigue siendo el contacto dominante
        frente a la capsula de pierna.
-5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
-6. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
+5. [x] Sensores y graficas (Fase 5): el controlador CAD usa velocidad estimada
+       desde encoder cuantizado; `src/run_cad_logged.py` genera el CSV y las
+       graficas de la rubrica en `results/`.
+6. [ ] Contacto duro afinado (Fase 3).
+7. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
 
 Comandos:
 
@@ -114,6 +122,7 @@ Comandos:
     .venv-py312/bin/python src/render_simulation.py     # cajitas saltando -> results/renders/hopping.mp4
     .venv-py312/bin/python src/render_cad_view.py       # CAD quieto (giro) -> results/renders/cad_view.mp4
     .venv-py312/bin/python src/run_logged_simulation.py # log y graficas en results/
+    .venv-py312/bin/python src/run_cad_logged.py        # CSV y graficas del CAD -> results/logs y results/plots
 
 El visor interactivo (view_hoppy, hybrid_controller_test) abre ventana GLFW y
 crashea en Linux con driver Intel Xe; en Windows/Mac si funciona. Por eso en

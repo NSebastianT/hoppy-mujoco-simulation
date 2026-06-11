@@ -20,11 +20,14 @@ MIN_FLIGHT = 0.10
 PUSH_TIME = 0.15
 BLEND_TIME = 0.010
 PUSH_PEAK = 560.0
-HORIZONTAL_FORCE = -35.0
+HORIZONTAL_FORCE = 35.0
 WARMUP_TIME = 1.0
 WARMUP_START = 0.00
 STARTUP_SETTLE_FORCE = 210.0
 SOFT_ENGAGE_TIME = 0.50
+ENCODER_COUNTS_PER_REV = 751.8
+ENCODER_STEP = 2.0 * np.pi / ENCODER_COUNTS_PER_REV
+VELOCITY_FILTER_LAMBDA = 15.0
 
 FLIGHT_REF = np.array([0.26, -0.48])
 STANCE_REF = np.array([0.08, 0.0])
@@ -52,6 +55,9 @@ class Hopper:
         self.air_start = None
         self.air_times = []
         self.liftoffs = 0
+        self.q_meas = np.zeros(2)
+        self.v_est = np.zeros(2)
+        self.prev_q_meas = None
 
     def _jid(self, name):
         return mujoco.mj_name2id(self.m, mujoco.mjtObj.mjOBJ_JOINT, name)
@@ -65,6 +71,26 @@ class Hopper:
         self.air_start = None if contact else data.time
         self.air_times.clear()
         self.liftoffs = 0
+        self.q_meas = self.quantized_actuated_positions(data)
+        self.prev_q_meas = self.q_meas.copy()
+        self.v_est[:] = 0.0
+
+    def quantized_actuated_positions(self, data):
+        q = np.array([data.qpos[self.qa["joint3"]], data.qpos[self.qa["joint4"]]])
+        return np.round(q / ENCODER_STEP) * ENCODER_STEP
+
+    def update_encoder(self, data):
+        q_now = self.quantized_actuated_positions(data)
+        if self.prev_q_meas is None:
+            self.prev_q_meas = q_now.copy()
+            self.q_meas = q_now
+            return
+        dt = self.m.opt.timestep
+        raw_velocity = (q_now - self.prev_q_meas) / dt
+        alpha = (VELOCITY_FILTER_LAMBDA * dt) / (1.0 + VELOCITY_FILTER_LAMBDA * dt)
+        self.v_est += alpha * (raw_velocity - self.v_est)
+        self.prev_q_meas = q_now.copy()
+        self.q_meas = q_now
 
     def in_contact(self, data):
         for i in range(data.ncon):
@@ -82,8 +108,7 @@ class Hopper:
 
     def _pd(self, data, ref, kp, kd):
         q = np.array([data.qpos[self.qa["joint3"]], data.qpos[self.qa["joint4"]]])
-        v = np.array([data.qvel[self.va["joint3"]], data.qvel[self.va["joint4"]]])
-        return kp * (ref - q) - kd * v
+        return kp * (ref - q) - kd * self.v_est
 
     @staticmethod
     def _smooth01(x):
@@ -135,6 +160,7 @@ class Hopper:
         return contact
 
     def control(self, data):
+        self.update_encoder(data)
         self.update_state(data)
         if self.state == "STANCE":
             tau = self.stance(data, data.time - self.stance_start)
