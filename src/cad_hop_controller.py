@@ -20,9 +20,10 @@ MIN_FLIGHT = 0.10
 PUSH_TIME = 0.15
 BLEND_TIME = 0.010
 PUSH_PEAK = 560.0
-HORIZONTAL_FORCE = 50.0
+HORIZONTAL_FORCE = 35.0
 WARMUP_TIME = 1.0
-WARMUP_START = 0.10
+WARMUP_START = 0.00
+STARTUP_SETTLE_FORCE = 210.0
 
 FLIGHT_REF = np.array([0.26, -0.48])
 STANCE_REF = np.array([0.08, 0.0])
@@ -108,7 +109,7 @@ class Hopper:
         if radial_norm > 1e-6:
             radial = foot_xy / radial_norm
             tangent[:2] = [-radial[1], radial[0]]
-        force_world = warmup * (np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent)
+        force_world = warmup * np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent + (1.0 - warmup) * np.array([0.0, 0.0, STARTUP_SETTLE_FORCE])
         force_tau = self.foot_jac(data).T @ force_world
         stance_tau = force_tau + warmup * self._pd(data, STANCE_REF, STANCE_KP, STANCE_KD)
         return (1.0 - alpha) * self.flight(data) + alpha * stance_tau
