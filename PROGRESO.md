@@ -28,12 +28,21 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
 - [x] Damping equivalente back-EMF = (kv*kt/Rw)*N^2.
 - [x] Contrapeso en el extremo opuesto del gantry.
 
-### Fase 2 - Restricciones del actuador (10 pts) -- en progreso
+### Fase 2 - Restricciones del actuador (10 pts) -- completa
 - [x] Saturacion de torque del motor aplicada en el modelo y el controlador:
       ±12.2 N·m (cadera) y ±13 N·m (rodilla), del pico de 30 A del driver
       (0.405 N·m/A a la salida). Antes estaba en ±35, irreal.
-- [ ] Simulaciones comparativas mostrando el efecto de armature, damping,
-      resorte y saturacion.
+- [x] Simulaciones comparativas (tools/compare_actuator.py -> grafica
+      results/plots/cad_comparison_height.png). Corre el mismo salto toggleando
+      cada efecto y mide el pico de altura del cuerpo:
+        baseline (todo realista) ....... 0.393 m
+        sin armature ................... 0.590 m  (sin inercia de rotor sube)
+        sin damping .................... 0.489 m  (sin perdidas back-EMF sube)
+        sin resorte de rodilla ......... 0.440 m  (efecto leve)
+        sin saturacion (+-35 Nm) ....... 0.618 m  (con mas torque sube)
+      Analisis: cada efecto realista (armature, damping, saturacion) BAJA el
+      salto hacia lo fisico; el baseline es el mas bajo porque tiene todos los
+      limitantes activos. Es la validacion del modelo de actuador.
 
 ### Fase 3 - Contacto pie-suelo (15 pts) -- pendiente
 - [ ] Ajuste de solref, solimp y friccion para contacto duro (minimizar rebotes,
