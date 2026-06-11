@@ -99,9 +99,11 @@ El profe quiere ver el modelo real saltando. Pasos:
        controlador CAD usa perfil de fuerza Bezier de 0.15 s, alpha de 10 ms y
        PD fuerte de pierna. Tambien se alineo la colision del pie con el
        extremo visual de Link4 y se agrego una capsula delgada de pierna baja.
-       En 6 s reporta 9 vuelos reales (>0.10 s), amplitud de Link3 ~0.321 m,
-       yaw_delta ~-1.76 rad, mesh_min_z ~0.112 m, estable y dentro de torque.
-       El pie sigue siendo el contacto dominante frente a la capsula de pierna.
+       El stance incluye warmup de 1.0 s para evitar el lanzon inicial. En 6 s
+       reporta 10 vuelos reales (>0.10 s), first_hop_peak ~0.396 m,
+       steady_peak ~0.346 m, yaw_progress ~1.74 rad, mesh_min_z ~0.112 m,
+       estable y dentro de torque. El pie sigue siendo el contacto dominante
+       frente a la capsula de pierna.
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
 6. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
 

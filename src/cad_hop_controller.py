@@ -21,6 +21,8 @@ PUSH_TIME = 0.15
 BLEND_TIME = 0.010
 PUSH_PEAK = 560.0
 HORIZONTAL_FORCE = 50.0
+WARMUP_TIME = 1.0
+WARMUP_START = 0.10
 
 FLIGHT_REF = np.array([0.26, -0.48])
 STANCE_REF = np.array([0.08, 0.0])
@@ -97,6 +99,7 @@ class Hopper:
 
     def stance(self, data, stance_time):
         phase = stance_time / PUSH_TIME
+        warmup = WARMUP_START + (1.0 - WARMUP_START) * self._smooth01(data.time / WARMUP_TIME)
         force = self.push_peak * self._bezier_pulse(phase)
         alpha = self._smooth01(stance_time / BLEND_TIME)
         foot_xy = data.site_xpos[self.foot_s, :2]
@@ -105,9 +108,9 @@ class Hopper:
         if radial_norm > 1e-6:
             radial = foot_xy / radial_norm
             tangent[:2] = [-radial[1], radial[0]]
-        force_world = np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent
+        force_world = warmup * (np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent)
         force_tau = self.foot_jac(data).T @ force_world
-        stance_tau = force_tau + self._pd(data, STANCE_REF, STANCE_KP, STANCE_KD)
+        stance_tau = force_tau + warmup * self._pd(data, STANCE_REF, STANCE_KP, STANCE_KD)
         return (1.0 - alpha) * self.flight(data) + alpha * stance_tau
 
     def update_state(self, data):

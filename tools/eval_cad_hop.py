@@ -73,6 +73,8 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
     foot_contact_steps = 0
     leg_contact_steps = 0
     both_contact_steps = 0
+    flight_peaks = []
+    current_flight_peak = None
 
     for step in range(steps):
         tau = hopper.control(data)
@@ -82,6 +84,14 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
 
         z_values[step] = data.xpos[link3, 2]
         yaw_values[step] = data.qpos[joint1_q]
+        if hopper.state == "FLIGHT" and hopper.liftoffs > 0:
+            if current_flight_peak is None:
+                current_flight_peak = z_values[step]
+            else:
+                current_flight_peak = max(current_flight_peak, z_values[step])
+        elif current_flight_peak is not None:
+            flight_peaks.append(float(current_flight_peak))
+            current_flight_peak = None
         foot_contact = False
         leg_contact = False
         for i in range(data.ncon):
@@ -98,6 +108,9 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
             finite = False
             break
 
+    if current_flight_peak is not None:
+        flight_peaks.append(float(current_flight_peak))
+
     z_values = z_values[:step + 1]
     yaw_values = yaw_values[:step + 1]
     yaw_delta = float(yaw_values[-1] - initial_yaw)
@@ -106,6 +119,10 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
     yaw_monotonic_fraction = 1.0
     if yaw_steps.size and abs(yaw_delta) > 1e-9:
         yaw_monotonic_fraction = float(np.mean(np.sign(yaw_delta) * yaw_steps >= -1e-4))
+
+    first_hop_peak = flight_peaks[0] if flight_peaks else float("nan")
+    steady_peak = float(np.mean(flight_peaks[1:])) if len(flight_peaks) > 1 else float("nan")
+    peak_ratio = first_hop_peak / steady_peak if steady_peak and np.isfinite(steady_peak) else float("nan")
 
     real_air = [t for t in hopper.air_times if t > 0.10]
     if hopper.state == "FLIGHT" and hopper.air_start is not None:
@@ -121,6 +138,10 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
         "yaw_min": float(np.min(yaw_values)),
         "yaw_max": float(np.max(yaw_values)),
         "yaw_monotonic_fraction": yaw_monotonic_fraction,
+        "first_hop_peak": float(first_hop_peak),
+        "steady_peak": float(steady_peak),
+        "first_to_steady_peak_ratio": float(peak_ratio),
+        "flight_peaks": flight_peaks,
         "link3_z_min": float(np.min(z_values)),
         "link3_z_max": float(np.max(z_values)),
         "link3_z_amp": float(np.max(z_values) - np.min(z_values)),
@@ -152,6 +173,10 @@ def main():
     print(f"yaw_progress: {metrics['yaw_progress']:.4f} rad")
     print(f"yaw_range: {metrics['yaw_min']:.4f} .. {metrics['yaw_max']:.4f} rad")
     print(f"yaw_monotonic_fraction: {metrics['yaw_monotonic_fraction']:.3f}")
+    print(f"first_hop_peak: {metrics['first_hop_peak']:.4f} m")
+    print(f"steady_peak: {metrics['steady_peak']:.4f} m")
+    print(f"first_to_steady_peak_ratio: {metrics['first_to_steady_peak_ratio']:.3f}")
+    print("flight_peaks:", ", ".join(f"{z:.3f}" for z in metrics["flight_peaks"]) or "none")
     print(f"link3_z_amp: {metrics['link3_z_amp']:.4f} m")
     print(f"link3_z_range: {metrics['link3_z_min']:.4f} .. {metrics['link3_z_max']:.4f} m")
     print(f"mesh_min_z: {metrics['mesh_min_z']:.4f} m")
