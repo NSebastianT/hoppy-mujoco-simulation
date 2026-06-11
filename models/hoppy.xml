@@ -21,6 +21,7 @@
         <geom name="floor" type="plane" size="2 2 0.1" rgba="0.8 0.8 0.8 1"/>
 
         <body name="gantry_yaw_body" pos="0 0 0.48">
+            <joint name="gantry_yaw" type="hinge" axis="0 0 1" damping="0.05" armature="0.01"/>
             <geom name="yaw_hub" type="sphere" size="0.035" mass="0.05" rgba="0.1 0.1 0.1 1"/>
 
             <body name="gantry_pitch_body" pos="0 0 0">
@@ -77,6 +78,6 @@
     </actuator>
 
     <keyframe>
-        <key name="home" qpos="0 0.025 -0.10"/>
+        <key name="home" qpos="0 0 0.025 -0.10"/>
     </keyframe>
 </mujoco>
