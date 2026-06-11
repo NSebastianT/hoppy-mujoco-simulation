@@ -224,5 +224,8 @@ rubrica.pdf
 HOPPY_Technical_Guideline.pdf
 .venv-py312/
 
+# Official CAD source archive (17 MB; meshes are decimated into assets/ instead)
+HOPPY-E0-final.zip
+
 # Generated offscreen renders (videos/images produced by src/render_*.py)
 results/renders/

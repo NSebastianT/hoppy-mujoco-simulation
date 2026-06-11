@@ -407,8 +407,7 @@ Render the hopping simulation:
 python src\render_simulation.py
 ```
 
-Render a 360 spin of the official CAD form (CAD meshes opaque, primitives
-hidden):
+Render a 360 spin of the faithful CAD model (`models/hoppy_cad_view.xml`):
 
 ```bat
 python src\render_cad_view.py
@@ -416,6 +415,25 @@ python src\render_cad_view.py
 
 Both write to `results/renders/` (gitignored). Optional args:
 `python src\render_simulation.py out.mp4 8` (output path, seconds).
+
+## Faithful CAD model (`models/hoppy_cad_view.xml`)
+
+`models/hoppy.xml` is the simplified **physics** model (capsules + the tuned
+controller). Its CAD overlay was placed by hand and is only approximate.
+
+`models/hoppy_cad_view.xml` is a **visual-only** model built straight from the
+official `HOPPY-E0-final` URDF export (SolidWorks). It uses the exact joint
+transforms and the official meshes, so the robot assembles correctly. It is not
+used for simulation — the foot rests ~4 cm above the floor because the real rig
+is boom-mounted (the leg hops above the surface).
+
+The official `Link2`/`Link3` STLs exceed MuJoCo's 200k-face limit, so they are
+decimated into `assets/meshes/hoppy_official_urdf/`. To regenerate from the
+official export:
+
+```bat
+python tools\prepare_cad_view_meshes.py path\to\HOPPY-E0-final\meshes
+```
 
 ## How to regenerate CAD meshes
 
