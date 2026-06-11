@@ -52,7 +52,7 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
       bajos. Hay que rediseniar el control de stance: mantener contacto mientras
       se acelera el cuerpo, con perfil de fuerza Bezier sobre ~0.15 s y timing
       de la maquina de estados acorde.
-- [ ] Perfil de fuerza justificado (Bezier) y transicion suave alpha.
+- [x] Perfil de fuerza Bezier en stance, transicion suave alpha de 10 ms y PD de pierna mas fuerte en el CAD.
 
 ### Fase 5 - Sensores y procesamiento (15 pts) -- parcial
 - [x] Estimacion de velocidad por derivada filtrada (no se usa qvel directo).
@@ -93,18 +93,16 @@ El profe quiere ver el modelo real saltando. Pasos:
 3. [x] Controlador hibrido portado (`src/cad_hop_controller.py`): el CAD SALTA
        con fisica (pie sube ~0.2 m, boom pitchea, estable). Esta es la version
        que se puede mostrar al profe: el modelo real saltando.
-4. [ ] Afinar el salto (lo dificil). Diagnostico: el robot se ve "enterrado"
-       en el punto bajo porque el boom del CAD esta desbalanceado (par de
-       gravedad ~ -13 N*m en joint2) y se hunde; el modulo de cadera penetra el
-       piso ~7 cm. Probando contrapeso: el comportamiento es bimodal -- con poco
-       contrapeso se hunde/entierra pero salta, y con el suficiente para
-       balancear (~2 kg) la pierna sube y se queda flotando (no salta). No hay
-       punto intermedio simple. Conclusion: un salto limpio sin enterrarse
-       necesita rediseniar el controlador (push-off y aterrizaje propios, perfil
-       de fuerza Bezier, timing) y afinar el contrapeso junto con el control.
-       El contrapeso (que la rubrica pide) se agregara en ese rediseno.
+4. [~] Afinar el salto (lo dificil). Se agrego contrapeso como cuerpo hijo de
+       Link2 (1.75 kg en x=0.6 m), dejando el bias de joint2 alrededor de
+       -2.7 N*m. El controlador CAD ahora usa perfil de fuerza Bezier de 0.15 s,
+       alpha de 10 ms y PD fuerte de pierna. En 6 s reporta 6 vuelos reales
+       (>0.10 s), amplitud de Link3 ~0.245 m, estable y dentro de torque.
+       Sigue pendiente corregir la inconsistencia geometrica: con el foot_site
+       actual la malla de Link4 ya queda por debajo de z=0 cuando el pie hace
+       contacto, asi que la metrica estricta de vertices Link3/Link4 aun falla.
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
-6. [ ] Render final del CAD saltando con fisica.
+6. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
 
 Comandos:
 
