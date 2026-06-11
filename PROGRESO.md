@@ -29,10 +29,10 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
 - [ ] Yaw pasivo (4o DoF). La rubrica pide 4 DoF (yaw+pitch pasivos, cadera+
       rodilla activos); falta agregar el yaw. Pendiente de decision.
 
-### Fase 2 - Restricciones del actuador (10 pts) -- pendiente
-- [ ] Saturacion de torque calculada del motor. Estimacion: pico ~±12 N·m
-      (cadera) y ~±13 N·m (rodilla) con el driver a 30 A; continuo ~±3.7 N·m.
-      Hoy el modelo usa ±35 N·m, que es irreal.
+### Fase 2 - Restricciones del actuador (10 pts) -- en progreso
+- [x] Saturacion de torque del motor aplicada en el modelo y el controlador:
+      ±12.2 N·m (cadera) y ±13 N·m (rodilla), del pico de 30 A del driver
+      (0.405 N·m/A a la salida). Antes estaba en ±35, irreal.
 - [ ] Simulaciones comparativas mostrando el efecto de armature, damping,
       resorte y saturacion.
 
