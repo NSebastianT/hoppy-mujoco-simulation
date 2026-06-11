@@ -218,3 +218,8 @@ __marimo__/
 .streamlit/secrets.toml
 external/
 cad_files.txt
+
+# Project local files (reference docs / extra venvs — not versioned)
+rubrica.pdf
+HOPPY_Technical_Guideline.pdf
+.venv-py312/
