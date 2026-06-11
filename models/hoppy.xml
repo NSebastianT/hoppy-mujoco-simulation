@@ -1,32 +1,17 @@
 <mujoco model="hoppy">
-    <!-- ================================================================
-         HOPPY physics model (simplified capsule dynamics + tuned hybrid
-         controller). Parameters follow the project rubric / technical guide.
-
-         Phase 1 - Mechanical model:
-           * 4 DoF: gantry yaw (passive) + pitch (passive), hip + knee (active).
-             NOTE: passive yaw is added in a later step (see TODO below).
-           * armature  = N^2 * I_r   (reflected rotor inertia, guide eq. 6/8)
-           * damping   ~ (k_v*k_T/R_w)*N^2 + reducer losses (back-EMF, eq. 9)
-           * knee parallel spring via stiffness/springref (energy storage)
-         Motor gear ratios: N_H = 26.9, N_K = 28.8.
-         Assumed rotor inertia I_r = 2.5e-5 kg*m^2 (REPLACE with datasheet).
-         ================================================================ -->
+    <!-- Gantry (yaw+pitch, passive) + leg (hip+knee, active). Capsule dynamics
+         driven by the hybrid controller. Motor: goBilda 5202 26.9:1 (RS-555),
+         VNH5019 driver at 12 V. Reflected rotor inertia armature = N^2*Ir and
+         back-EMF damping = (kv*kt/Rw)*N^2; knee carries a parallel spring.
+         Motor constants: Rw=1.30, kt=kv=0.0186, Ir~1e-5; N_hip=26.9, N_knee=28.8. -->
     <compiler angle="radian" coordinate="local"/>
 
-    <!-- Rubric 3.1 recommended solver/contact configuration -->
-    <option gravity="0 0 -9.81"
-            timestep="0.001"
-            integrator="RK4"
-            solver="Newton"
-            iterations="50"
-            tolerance="1e-8"/>
+    <option gravity="0 0 -9.81" timestep="0.001" integrator="RK4"
+            solver="Newton" iterations="50" tolerance="1e-8"/>
 
     <default>
         <joint damping="0.02" armature="0.0"/>
-        <geom friction="1.5 0.02 0.001"
-              solref="0.01 1"
-              solimp="0.95 0.99 0.001"/>
+        <geom friction="1.5 0.02 0.001" solref="0.01 1" solimp="0.95 0.99 0.001"/>
     </default>
 
     <worldbody>
@@ -39,7 +24,6 @@
             <geom name="yaw_hub" type="sphere" size="0.035" mass="0.05" rgba="0.1 0.1 0.1 1"/>
 
             <body name="gantry_pitch_body" pos="0 0 0">
-                <!-- Passive pitch joint (theta2): no actuator -->
                 <joint name="gantry_pitch" type="hinge" axis="0 1 0"
                        limited="true" range="-0.15 0.30"
                        damping="0.12" armature="0.002"/>
@@ -48,15 +32,13 @@
                       fromto="-0.35 0 0 0.70 0 0"
                       size="0.018" mass="0.12" rgba="0.1 0.1 0.1 1"/>
 
-                <!-- Counterweight at the opposite end of the gantry -->
                 <geom name="counterweight" type="sphere" pos="-0.35 0 0"
                       size="0.07" mass="0.35" rgba="0.2 0.2 0.8 1"/>
 
                 <body name="hip_body" pos="0.70 0 0">
-                    <!-- Active hip joint (theta3). armature = N_H^2 * I_r = 26.9^2 * 2.5e-5 -->
                     <joint name="hip" type="hinge" axis="1 0 0"
                            limited="true" range="-1.8 1.8"
-                           damping="0.08" armature="0.0181"/>
+                           damping="0.192" armature="0.0072"/>
 
                     <geom name="hip_motor_mass" type="box" pos="0 0 0"
                           size="0.06 0.06 0.06" mass="0.18"
@@ -68,11 +50,9 @@
                           rgba="0.8 0.2 0.2 1"/>
 
                     <body name="lower_leg_body" pos="0 0 -0.22">
-                        <!-- Active knee joint (theta4). armature = N_K^2 * I_r = 28.8^2 * 2.5e-5.
-                             Parallel spring (stiffness/springref) stores/releases hop energy. -->
                         <joint name="knee" type="hinge" axis="1 0 0"
                                limited="true" range="-2.4 0.2"
-                               damping="0.08" armature="0.0207"
+                               damping="0.220" armature="0.0083"
                                stiffness="2.0" springref="-0.7"/>
 
                         <geom name="lower_leg" type="capsule"
@@ -97,7 +77,6 @@
     </actuator>
 
     <keyframe>
-        <!-- Natural standing pose with the foot resting on the floor -->
         <key name="home" qpos="0 0.025 -0.10"/>
     </keyframe>
 </mujoco>
