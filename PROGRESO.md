@@ -90,16 +90,19 @@ El profe quiere ver el modelo real saltando. Pasos:
 1. [x] Modelo CAD con fisica (`hoppy_cad_physics.xml`): colision de pie/piso,
        motores en cadera/rodilla, armature/damping/resorte. Cae y apoya estable.
 2. [x] Prueba de caida (contacto valido, sin explotar).
-3. [ ] Portar el controlador hibrido a este modelo (Jacobiano del pie sobre
-       joint3/joint4, deteccion de contacto, FLIGHT/STANCE).
-4. [ ] Afinar el salto (resolver el liftoff prematuro, perfil de fuerza, timing).
+3. [x] Controlador hibrido portado (`src/cad_hop_controller.py`): el CAD SALTA
+       con fisica (pie sube ~0.2 m, boom pitchea, estable). Esta es la version
+       que se puede mostrar al profe: el modelo real saltando.
+4. [ ] Afinar el salto: hoy son saltos rapidos (22 en 6 s); falta hacerlos mas
+       limpios/altos (perfil de fuerza, timing de la maquina de estados).
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
 6. [ ] Render final del CAD saltando con fisica.
 
 Comandos:
 
-    .venv-py312/bin/python src/render_simulation.py     # salto -> results/renders/hopping.mp4
-    .venv-py312/bin/python src/render_cad_view.py       # CAD   -> results/renders/cad_view.mp4
+    .venv-py312/bin/python src/cad_hop_controller.py    # CAD con fisica saltando -> results/renders/cad_hopping.mp4
+    .venv-py312/bin/python src/render_simulation.py     # cajitas saltando -> results/renders/hopping.mp4
+    .venv-py312/bin/python src/render_cad_view.py       # CAD quieto (giro) -> results/renders/cad_view.mp4
     .venv-py312/bin/python src/run_logged_simulation.py # log y graficas en results/
 
 El visor interactivo (view_hoppy, hybrid_controller_test) abre ventana GLFW y
