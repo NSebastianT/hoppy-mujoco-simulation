@@ -1,154 +1,439 @@
 # HOPPY MuJoCo Simulation
 
-Proyecto de simulación del robot HOPPY en MuJoCo.
+This repository contains a MuJoCo simulation of HOPPY, a dynamic single-legged robot designed to hop around a fixed gantry.
 
-## Objetivo
+The project currently has two working directions:
 
-Simular una versión simplificada del robot HOPPY usando MJCF/XML y Python. El modelo incluye:
+1. A simplified dynamic MuJoCo model that can hop.
+2. A CAD-based visual version that uses official HOPPY STEP files exported with FreeCAD.
 
-- Gantry restringido con movimiento pasivo en pitch.
-- Pierna con dos grados de libertad activos: hip y knee.
-- Contrapeso en el extremo opuesto del gantry.
-- Masa adicional en la zona de la cadera para representar motor/carcasa.
-- Contacto pie-suelo.
-- Detección de touchdown y lift-off.
-- Máquina de estados FLIGHT/STANCE.
-- Control híbrido basado en posturas articulares.
-- Saturación de torque.
-- Estimación filtrada de velocidades.
-- Generación de logs y gráficas.
-- Scripts de diagnóstico para revisar parámetros físicos del modelo.
+The current simulation is not presented as a fully exact replica of the physical HOPPY robot. The dynamics are simplified on purpose so the model can be controlled, tested, logged, and explained. The official CAD geometry is used mainly to improve visual fidelity.
 
-## Nota sobre el modelo
+## Branches
 
-Este repositorio no usa un modelo MuJoCo oficial de HOPPY ya existente. El archivo `models/hoppy.xml` es una aproximación simplificada construida en MJCF con base en la arquitectura general de HOPPY: gantry, contrapeso, pierna de dos articulaciones, contacto con el suelo y control híbrido.
+```text
+main
+```
 
-El modelo actual no pretende representar con exactitud todas las piezas CAD, tornillos, perfiles metálicos, mallas STL o componentes reales del kit físico. Su propósito es capturar una estructura dinámica simplificada que permita simular contacto, fases de vuelo/apoyo, control y análisis de resultados.
+Stable simplified model with hybrid control. This is the safest branch for the basic working simulation.
 
-En la versión actual se priorizó una simulación funcional y estable sobre una representación CAD-realista. El gantry se encuentra restringido para evitar que el sistema se descontrole fuera del plano principal de movimiento.
+```text
+repeat-hop-control
+```
 
-## Instalación
+Experimental branch with an adaptive controller for repeated hopping. This branch produced the best repeated hopping behavior, but it is separate from `main`.
 
-Crear ambiente Conda:
+```text
+cad-official-hoppy
+```
+
+Branch with official HOPPY CAD visual meshes integrated into the MuJoCo scene. This is the branch used for the version that visually resembles the real HOPPY.
+
+## Current model
+
+The MuJoCo model currently uses:
+
+- one passive gantry pitch joint,
+- one actuated hip joint,
+- one actuated knee joint,
+- a counterweight,
+- a foot contact point,
+- simple collision geometry,
+- official CAD meshes as visual geometry.
+
+The current dynamic model has three generalized coordinates:
+
+```text
+gantry_pitch
+hip
+knee
+```
+
+The official HOPPY CAD model has more mechanical detail than the current dynamic model. For now, the full linkage is not rebuilt as a complete multi-joint mechanism. Instead, the simulation uses simplified bodies for dynamics and official CAD meshes for visualization.
+
+## Official CAD integration
+
+The official CAD files come from the RoboDesignLab HOPPY project.
+
+The original CAD files are SolidWorks assemblies and STEP files. The STEP assemblies were exported to STL meshes using FreeCAD.
+
+The converted visual meshes are stored in:
+
+```text
+assets/meshes/hoppy_official/
+```
+
+Current visual meshes:
+
+```text
+link1_visual.stl
+link2_visual.stl
+link3_visual.stl
+link4_visual.stl
+```
+
+The conversion scripts are stored in:
+
+```text
+tools/
+```
+
+Scripts:
+
+```text
+tools/inspect_step_freecad.py
+tools/export_step_meshes_freecad.py
+```
+
+The STL meshes were simplified so that each one stays below MuJoCo's STL face limit. These meshes are used as visual geometry only.
+
+## Main files
+
+```text
+models/hoppy.xml
+src/hybrid_controller_test.py
+src/run_logged_simulation.py
+```
+
+`models/hoppy.xml` defines the MuJoCo model.
+
+`src/hybrid_controller_test.py` runs the interactive hybrid controller test.
+
+`src/run_logged_simulation.py` generates logs and plots for analysis.
+
+## Controller
+
+The controller uses a hybrid state machine with two states:
+
+```text
+FLIGHT
+STANCE
+```
+
+The code detects foot-ground contact using MuJoCo contacts between:
+
+```text
+foot
+floor
+```
+
+During `FLIGHT`, the controller uses a joint-space PD controller to keep the leg in a reasonable posture before landing.
+
+During `STANCE`, the controller computes the foot Jacobian and applies a desired vertical foot force using:
+
+```text
+tau = J^T F
+```
+
+This generates a vertical push during ground contact.
+
+The actuator commands are saturated using a torque limit:
+
+```text
+TORQUE_LIMIT = 35.0
+```
+
+## What works
+
+The current project already has:
+
+- a MuJoCo model that loads correctly,
+- a working floor contact,
+- touchdown detection,
+- lift-off detection,
+- a `FLIGHT / STANCE` hybrid state machine,
+- torque saturation,
+- a Jacobian-based stance push,
+- a simplified model that can hop,
+- official HOPPY CAD visual meshes loaded into MuJoCo,
+- an official-looking gantry visual integrated into the dynamic scene,
+- generated plots from logged simulations.
+
+## Plots already generated
+
+The project generated plots for:
+
+```text
+joint_positions.png
+estimated_velocities.png
+foot_position.png
+foot_world_z.png
+hip_height.png
+normal_force.png
+hybrid_state.png
+torques.png
+gantry_pitch.png
+gantry_pitch_velocity.png
+foot_relative_position.png
+foot_vertical_velocity.png
+```
+
+These plots were used to analyze:
+
+- joint motion,
+- estimated velocity,
+- foot height,
+- hip height,
+- contact timing,
+- normal force,
+- hybrid state transitions,
+- torque commands,
+- gantry pitch motion.
+
+The plots should be regenerated from the final selected branch before delivery, because the controller and visual model changed during development.
+
+## Current limitations
+
+The current simulation is still simplified.
+
+Important limitations:
+
+- The visual CAD geometry is not used for contact.
+- Contact still uses simple MuJoCo collision geometry.
+- The model does not yet use CAD-derived inertias.
+- The full official HOPPY linkage has not been rebuilt as a complete multi-joint mechanism.
+- The current dynamic model only uses gantry pitch, hip, and knee.
+- The CAD visual offsets still need tuning.
+- The adaptive repeated hopping controller is in `repeat-hop-control`, not merged into `cad-official-hoppy`.
+- The current `cad-official-hoppy` branch prioritizes visual integration over final control tuning.
+
+## Pending work
+
+These are the remaining tasks.
+
+### 1. Decide the final delivery branch
+
+Choose which branch will be used for the final demo:
+
+```text
+main
+repeat-hop-control
+cad-official-hoppy
+```
+
+Recommended path:
+
+```text
+cad-official-hoppy
+```
+
+because it includes the official CAD visual model.
+
+Then decide whether to merge the adaptive hopping controller from:
+
+```text
+repeat-hop-control
+```
+
+into:
+
+```text
+cad-official-hoppy
+```
+
+### 2. Regenerate all plots
+
+Run the logged simulation again from the final branch.
+
+Expected output:
+
+```text
+results/logs/hybrid_log.csv
+results/plots/*.png
+```
+
+The plots should include at least:
+
+```text
+joint positions
+joint/foot estimated velocities
+foot height
+hip height
+normal force
+hybrid state
+torques
+gantry pitch
+gantry pitch velocity
+```
+
+These plots are needed for the report and presentation.
+
+### 3. Tune the CAD visual alignment
+
+The CAD meshes are loaded and visible, but some offsets still need adjustment.
+
+Things to check:
+
+```text
+Link2 gantry alignment
+Link3 upper-leg alignment
+Link4 lower-leg/foot alignment
+hip area visual overlap
+counterweight visual position
+```
+
+This is visual tuning only. It should not change the collision geometry unless needed.
+
+### 4. Decide whether to keep the static CAD reference
+
+The scene currently can include a static official CAD reference model.
+
+For the final demo, decide whether to:
+
+```text
+keep it as a comparison reference
+```
+
+or
+
+```text
+remove it to keep the scene clean
+```
+
+### 5. Decide what to do with the black simplified hip box
+
+The black box is useful dynamically because it represents mass near the hip.
+
+For the final visual version, decide whether to:
+
+```text
+keep it opaque
+make it transparent
+reduce its size
+hide it visually but keep an equivalent inertial body
+```
+
+The safest option is to keep the simple mass for dynamics and make it less visually dominant.
+
+### 6. Confirm model scope with the professor
+
+Ask whether the expected final model is:
+
+```text
+a simplified MuJoCo dynamic model with official CAD visuals
+```
+
+or
+
+```text
+a full CAD/URDF-style reconstruction of the official HOPPY mechanism
+```
+
+This matters because the current model is not a full reconstruction of every official mechanical joint.
+
+### 7. Document simplifications clearly
+
+The report should clearly state:
+
+```text
+The model uses simplified collision geometry.
+The CAD meshes are visual only.
+The controller is tested on the simplified dynamic model.
+The official CAD improves visual fidelity but does not define contact dynamics.
+```
+
+### 8. Compare controller versions
+
+Compare at least two versions:
+
+```text
+stable Jacobian controller
+adaptive repeated hopping controller
+```
+
+Explain which one is more stable and which one produces better hopping.
+
+### 9. Verify torque saturation
+
+The controller clips torque commands.
+
+Before delivery, check plots or terminal output to confirm:
+
+```text
+maximum hip torque
+maximum knee torque
+whether either actuator saturates
+```
+
+### 10. Prepare final explanation
+
+The final explanation should cover:
+
+```text
+model structure
+contact detection
+FLIGHT / STANCE state machine
+Jacobian stance control
+torque saturation
+logged plots
+CAD visual integration
+limitations
+next steps
+```
+
+## How to run
+
+Activate the environment:
 
 ```bat
-conda create -n hoppy_mujoco python=3.11 -y
 conda activate hoppy_mujoco
-pip install -r requirements.txt
 ```
 
-## Scripts principales
-
-Verificar instalación de MuJoCo:
+Go to the project folder:
 
 ```bat
-python src\smoke_test.py
+cd /d C:\Users\nabor\OneDrive\Escritorio\6to\Humanoides\hoppy-mujoco-simulation
 ```
 
-Ver el modelo HOPPY:
-
-```bat
-python src\view_hoppy.py
-```
-
-Probar contacto pie-suelo:
-
-```bat
-python src\test_contact.py
-```
-
-Probar máquina de estados:
-
-```bat
-python src\state_machine_test.py
-```
-
-Probar controlador híbrido con viewer:
+Run the interactive controller:
 
 ```bat
 python src\hybrid_controller_test.py
 ```
 
-Generar logs y gráficas:
+Run the logged simulation:
 
 ```bat
 python src\run_logged_simulation.py
 ```
 
-## Scripts de diagnóstico
+## How to regenerate CAD meshes
 
-Estos scripts se usaron para entender y ajustar la simulación antes de llegar a la versión actual:
+FreeCAD is used to export the official STEP assemblies to simplified STL meshes.
+
+Example:
 
 ```bat
-python src\check_pose_grid.py
-python src\passive_dynamics_test.py
-python src\sweep_initial_velocity.py
-python src\sweep_counterweight.py
-python src\sweep_closed_loop_counterweight.py
-python src\sweep_gantry_damping.py
+"C:\Users\nabor\AppData\Local\Programs\FreeCAD 1.1\bin\freecadcmd.exe" -c "import sys, runpy; sys.argv=['export_step_meshes_freecad.py', r'external\HOPPY-Project\CAD\Final_Assembly\Link4\Link4_Assembly.STEP', r'assets\meshes\hoppy_official\link4_visual.stl']; runpy.run_path(r'tools\export_step_meshes_freecad.py')"
 ```
 
-Sirven para revisar condiciones iniciales, dinámica pasiva, masa del contrapeso, respuesta del gantry, contacto con el suelo y comportamiento del sistema con diferentes parámetros.
-
-## Resultados
-
-Las gráficas se guardan en:
+The mesh simplification settings are inside:
 
 ```text
-results/plots/
+tools/export_step_meshes_freecad.py
 ```
 
-El log principal se guarda en:
+## Notes for the report
+
+The project should be presented as:
 
 ```text
-results/logs/hybrid_log.csv
+A MuJoCo simulation of a simplified HOPPY-like hopper with official HOPPY CAD visual integration.
 ```
 
-Gráficas generadas actualmente:
+The strongest technical points are:
 
 ```text
-foot_world_z.png
-foot_relative_position.png
-foot_vertical_velocity.png
-hip_height.png
-gantry_pitch.png
-gantry_pitch_velocity.png
-hybrid_state.png
-joint_positions.png
-normal_force.png
-torques.png
+hybrid FLIGHT/STANCE control
+contact-based transitions
+Jacobian-based stance push
+torque saturation
+logged plots
+official CAD visual integration
 ```
 
-## Estado actual
+The main limitation to state clearly is:
 
-El proyecto actualmente logra:
-
-- Cargar el modelo HOPPY simplificado.
-- Simular una pierna robótica con gantry, contrapeso, hip, knee y pie.
-- Mantener el sistema contenido para evitar rotaciones o caídas fuera del plano principal.
-- Detectar contacto pie-suelo.
-- Cambiar entre FLIGHT y STANCE.
-- Aplicar un controlador híbrido por posturas articulares.
-- Producir oscilaciones verticales pequeñas y periódicas.
-- Generar gráficas de altura de pie, altura de cadera, posición articular, velocidad estimada, torque, fuerza normal y estado híbrido.
-- Guardar scripts de diagnóstico para justificar decisiones de modelado.
-
-## Limitaciones actuales
-
-El modelo actual es funcional, pero todavía tiene limitaciones importantes:
-
-- No usa todavía STL/CAD real del HOPPY físico.
-- No representa todas las masas, inercias, offsets ni componentes reales del sistema.
-- El gantry está restringido para mejorar estabilidad.
-- El comportamiento actual corresponde a hopping vertical pequeño, no a salto grande ni locomoción hacia adelante.
-- El controlador es una aproximación educativa basada en posturas articulares, no una reproducción exacta del controlador oficial de HOPPY.
-- El contacto en MuJoCo se maneja mediante contacto físico, no mediante un modelo matemático con restricción perfecta del pie durante stance.
-
-## Pendientes
-
-- Preguntar al profesor si se espera usar STL/URDF/CAD real o si basta un MJCF simplificado.
-- Confirmar si el gantry puede estar restringido a un plano.
-- Confirmar si el objetivo es salto vertical o locomoción hacia adelante.
-- Mejorar el modelo físico usando parámetros más fieles de HOPPY si es necesario.
-- Documentar comparaciones con/sin armature, damping, spring y torque saturation.
-- Preparar una explicación técnica breve del modelo, controlador, resultados y limitaciones.
+```text
+The CAD geometry improves the visual model, but the physical simulation still uses simplified dynamics and collision geometry.
+```
