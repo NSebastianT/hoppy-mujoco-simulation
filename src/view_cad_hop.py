@@ -25,10 +25,10 @@ def main():
     hopper.reset(data)
 
     with mujoco.viewer.launch_passive(model, data) as viewer:
-        viewer.cam.lookat[:] = [-0.35, 0.0, 0.25]
-        viewer.cam.distance = 1.9
+        viewer.cam.lookat[:] = [-0.15, 0.0, 0.20]
+        viewer.cam.distance = 2.7
         viewer.cam.azimuth = 110
-        viewer.cam.elevation = -12
+        viewer.cam.elevation = -28
         viewer.sync()
 
         while viewer.is_running():

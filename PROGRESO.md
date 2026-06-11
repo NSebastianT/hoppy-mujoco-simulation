@@ -166,8 +166,17 @@ arriba; ya probado y funciona. Para grabar mp4 se usan los renders offscreen.
 - `rubric-physics`: fases de fisica (rama actual de trabajo).
 - `cad-in-action`: animacion cinematica del CAD (preview, sin merge todavia).
 
+## Limitaciones conocidas
+
+- Vueltas: el robot gira ~media vuelta (~180 grados, visible en el demo) y luego
+  se estanca. La rotacion continua no se logra con tuning simple: la fuerza
+  tangencial se acopla con la orientacion del plano de la pierna y se anula a la
+  media vuelta. Rotacion continua = trabajo futuro de control (control de
+  velocidad de yaw, no solo una fuerza tangencial). La camara del render/visor
+  se subio (elevation -28) para que la pierna se vea girando y no se esconda
+  tras la base.
+
 ## Decisiones abiertas
 
-- Agregar el yaw pasivo ahora (la rubrica lo pide) o dejarlo para el final.
 - Conseguir el datasheet del RS-555 para usar Ir exacto (hoy es estimado).
-- Como presentar el CAD con fisica real para la entrega final.
+- Rediseno de control para vueltas continuas (si se quiere para una v2).

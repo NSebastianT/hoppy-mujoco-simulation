@@ -189,10 +189,10 @@ def main():
     renderer = mujoco.Renderer(model, height=HEIGHT, width=WIDTH)
     cam = mujoco.MjvCamera()
     cam.type = mujoco.mjtCamera.mjCAMERA_FREE
-    cam.lookat[:] = [-0.35, 0.0, 0.25]
-    cam.distance = 1.9
+    cam.lookat[:] = [-0.15, 0.0, 0.20]
+    cam.distance = 2.7
     cam.azimuth = 110
-    cam.elevation = -12
+    cam.elevation = -28
 
     steps_per_frame = max(1, round((1.0 / FPS) / model.opt.timestep))
     frames = []
