@@ -168,6 +168,11 @@ arriba; ya probado y funciona. Para grabar mp4 se usan los renders offscreen.
 
 ## Limitaciones conocidas
 
+- Rebote de rodilla en vuelo: la pierna "rebota" en el aire por el resorte
+  paralelo real (jala a springref=0) peleando con la referencia de vuelo. No es
+  un bug; es el resorte de HOPPY (diseno/rubrica). Se bajo la rigidez de 2.0 a
+  1.0 (valor estimado) para reducir el rebote ~33% sin afectar el salto; no se
+  elimina del todo porque es la naturaleza del resorte.
 - Vueltas: el robot gira ~media vuelta (~180 grados, visible en el demo) y luego
   se estanca. La rotacion continua no se logra con tuning simple: la fuerza
   tangencial se acopla con la orientacion del plano de la pierna y se anula a la
