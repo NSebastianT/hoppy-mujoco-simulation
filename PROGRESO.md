@@ -19,15 +19,14 @@ Ultima actualizacion: 11 de junio 2026.
 
 Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
 
-### Fase 1 - Modelo mecanico (20 pts) -- en progreso
+### Fase 1 - Modelo mecanico (20 pts) -- completa
+- [x] 4 DoF: yaw + pitch pasivos, cadera + rodilla activos.
 - [x] Solver recomendado: RK4, Newton, timestep 1 ms (1 kHz), iterations 50,
       tolerance 1e-8.
 - [x] Resorte paralelo de rodilla (stiffness 2.0, springref -0.7).
 - [x] Armature = N^2*Ir en cadera y rodilla, con valores del motor real.
 - [x] Damping equivalente back-EMF = (kv*kt/Rw)*N^2.
 - [x] Contrapeso en el extremo opuesto del gantry.
-- [ ] Yaw pasivo (4o DoF). La rubrica pide 4 DoF (yaw+pitch pasivos, cadera+
-      rodilla activos); falta agregar el yaw. Pendiente de decision.
 
 ### Fase 2 - Restricciones del actuador (10 pts) -- en progreso
 - [x] Saturacion de torque del motor aplicada en el modelo y el controlador:
