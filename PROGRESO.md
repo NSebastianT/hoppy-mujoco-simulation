@@ -93,14 +93,15 @@ El profe quiere ver el modelo real saltando. Pasos:
 3. [x] Controlador hibrido portado (`src/cad_hop_controller.py`): el CAD SALTA
        con fisica (pie sube ~0.2 m, boom pitchea, estable). Esta es la version
        que se puede mostrar al profe: el modelo real saltando.
-4. [x] Afinar el salto del CAD. Se agrego contrapeso como cuerpo hijo de
-       Link2 (2.00 kg en x=0.6 m), dejando el bias de joint2 alrededor de
-       -1.2 N*m. El controlador CAD usa perfil de fuerza Bezier de 0.15 s,
-       alpha de 10 ms y PD fuerte de pierna. Tambien se alineo la colision del
-       pie con el extremo visual de Link4 y se agrego una capsula delgada de
-       pierna baja. En 6 s reporta 4 vuelos reales (>0.10 s), amplitud de
-       Link3 ~0.357 m, mesh_min_z ~0.112 m, estable y dentro de torque. El pie
-       sigue siendo el contacto dominante frente a la capsula de pierna.
+4. [x] Afinar el salto del CAD. El contrapeso visible se elimino y se plego
+       en el inercial de Link2 (masa 3.87654 kg, COM x=0.06075 m), dejando el
+       bias de joint2 alrededor de -1.2 N*m sin bloques flotantes. El
+       controlador CAD usa perfil de fuerza Bezier de 0.15 s, alpha de 10 ms y
+       PD fuerte de pierna. Tambien se alineo la colision del pie con el
+       extremo visual de Link4 y se agrego una capsula delgada de pierna baja.
+       En 6 s reporta 9 vuelos reales (>0.10 s), amplitud de Link3 ~0.238 m,
+       mesh_min_z ~0.112 m, estable y dentro de torque. El pie sigue siendo el
+       contacto dominante frente a la capsula de pierna.
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
 6. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
 

@@ -50,6 +50,8 @@ def min_mesh_z(model, data, body_meshes):
 
 def run(seconds=6.0, push_peak=None, stride=8):
     model, data = build_model_and_data()
+    joint2 = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint2")
+    initial_bias_joint2 = float(data.qfrc_bias[model.jnt_dofadr[joint2]])
     hopper = Hopper(model, push_peak=push_peak)
     hopper.reset(data)
 
@@ -99,6 +101,7 @@ def run(seconds=6.0, push_peak=None, stride=8):
 
     return {
         "seconds": data.time,
+        "bias_joint2": initial_bias_joint2,
         "link3_z_min": float(np.min(z_values[:step + 1])),
         "link3_z_max": float(np.max(z_values[:step + 1])),
         "link3_z_amp": float(np.max(z_values[:step + 1]) - np.min(z_values[:step + 1])),
@@ -124,6 +127,7 @@ def main():
 
     metrics = run(args.seconds, args.push, args.stride)
     print(f"seconds: {metrics['seconds']:.3f}")
+    print(f"bias_joint2: {metrics['bias_joint2']:.4f} N*m")
     print(f"link3_z_amp: {metrics['link3_z_amp']:.4f} m")
     print(f"link3_z_range: {metrics['link3_z_min']:.4f} .. {metrics['link3_z_max']:.4f} m")
     print(f"mesh_min_z: {metrics['mesh_min_z']:.4f} m")

@@ -44,19 +44,12 @@
 
                 <body name="Link2" pos="-0.00227444 -0.037431 0.21"
                       quat="0.705252 0.707058 0.00831865 -0.0511876">
-                    <inertial pos="-0.513966 0.0016327 -0.00902703"
+                    <inertial pos="0.06075 0.00079 -0.00437"
                               quat="0.500001 0.500001 0.499999 0.499999"
-                              mass="1.87654" diaginertia="0.0636508 0.0630427 0.00259304"/>
+                              mass="3.87654" diaginertia="0.13146 0.13021 0.00536"/>
                     <joint name="joint2" pos="0 0 0" axis="0 0 1" range="-0.5 0.5"
                            damping="0.12" armature="0.01"/>
                     <geom mesh="Link2" rgba="0.62 0.62 0.64 1"/>
-
-                    <body name="boom_counterweight" pos="0.6 0 0">
-                        <inertial pos="0 0 0" mass="2.00"
-                                  diaginertia="0.0032 0.0032 0.0032"/>
-                        <geom name="counterweight" type="box" pos="0 0 0"
-                              size="0.05 0.05 0.05" rgba="0.12 0.12 0.14 1"/>
-                    </body>
 
                     <body name="Link3" pos="-0.6585 0 0.0425"
                           quat="0.677009 -0.204104 -0.677009 0.204104">
