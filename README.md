@@ -47,39 +47,30 @@ The official HOPPY CAD model has more mechanical detail than the current dynamic
 
 ## Official CAD integration
 
-The official CAD files come from the RoboDesignLab HOPPY project.
+The official CAD comes from the RoboDesignLab HOPPY project, delivered as the
+`HOPPY-E0-final` SolidWorks-to-URDF export (a URDF plus STL meshes).
 
-The original CAD files are SolidWorks assemblies and STEP files. The STEP assemblies were exported to STL meshes using FreeCAD.
+`models/hoppy_cad_view.xml` is a faithful, **visual-only** assembly built
+straight from that URDF: the exact joint transforms plus the official meshes,
+so the robot assembles correctly. Render it with `src/render_cad_view.py`.
 
-The converted visual meshes are stored in:
-
-```text
-assets/meshes/hoppy_official/
-```
-
-Current visual meshes:
+The official `Link2`/`Link3` STLs exceed MuJoCo's 200k-face limit, so they are
+decimated (preserving each mesh's coordinate frame) into:
 
 ```text
-link1_visual.stl
-link2_visual.stl
-link3_visual.stl
-link4_visual.stl
+assets/meshes/hoppy_official_urdf/
 ```
 
-The conversion scripts are stored in:
+To regenerate them from the official export:
 
 ```text
-tools/
+python tools/prepare_cad_view_meshes.py path/to/HOPPY-E0-final/meshes
 ```
 
-Scripts:
-
-```text
-tools/inspect_step_freecad.py
-tools/export_step_meshes_freecad.py
-```
-
-The STL meshes were simplified so that each one stays below MuJoCo's STL face limit. These meshes are used as visual geometry only.
+The simplified physics model `models/hoppy.xml` (capsules + the tuned
+controller) is kept separate and is what the simulation actually runs. An
+earlier attempt that overlaid hand-placed FreeCAD meshes on that physics model
+was removed in favor of the faithful URDF-based view above.
 
 ## Main files
 

@@ -65,4 +65,9 @@
             </body>
         </body>
     </worldbody>
+
+    <keyframe>
+        <!-- Slight boom pitch (~3 deg) so the foot rests on the floor for display -->
+        <key name="stand" qpos="0 0.06 0 0"/>
+    </keyframe>
 </mujoco>
