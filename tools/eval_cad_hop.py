@@ -15,7 +15,7 @@ from render_utils import select_gl_backend  # noqa: E402
 select_gl_backend()
 
 import mujoco  # noqa: E402
-from cad_hop_controller import Hopper, TORQUE_LIMIT, build_model_and_data  # noqa: E402
+from cad_hop_controller import HORIZONTAL_FORCE, Hopper, TORQUE_LIMIT, build_model_and_data  # noqa: E402
 
 
 def mesh_points_for_body(model, body_name, stride=8):
@@ -48,11 +48,14 @@ def min_mesh_z(model, data, body_meshes):
     return zmin
 
 
-def run(seconds=6.0, push_peak=None, stride=8):
+def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8):
     model, data = build_model_and_data()
+    joint1 = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint1")
     joint2 = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "joint2")
+    joint1_q = model.jnt_qposadr[joint1]
     initial_bias_joint2 = float(data.qfrc_bias[model.jnt_dofadr[joint2]])
-    hopper = Hopper(model, push_peak=push_peak)
+    initial_yaw = float(data.qpos[joint1_q])
+    hopper = Hopper(model, push_peak=push_peak, horizontal_force=horizontal_force)
     hopper.reset(data)
 
     link3 = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "Link3")
@@ -63,6 +66,7 @@ def run(seconds=6.0, push_peak=None, stride=8):
 
     steps = int(seconds / model.opt.timestep)
     z_values = np.empty(steps)
+    yaw_values = np.empty(steps)
     min_z = np.inf
     max_tau = np.zeros(2)
     finite = True
@@ -77,6 +81,7 @@ def run(seconds=6.0, push_peak=None, stride=8):
         mujoco.mj_step(model, data)
 
         z_values[step] = data.xpos[link3, 2]
+        yaw_values[step] = data.qpos[joint1_q]
         foot_contact = False
         leg_contact = False
         for i in range(data.ncon):
@@ -93,6 +98,15 @@ def run(seconds=6.0, push_peak=None, stride=8):
             finite = False
             break
 
+    z_values = z_values[:step + 1]
+    yaw_values = yaw_values[:step + 1]
+    yaw_delta = float(yaw_values[-1] - initial_yaw)
+    yaw_steps = np.diff(yaw_values)
+    yaw_progress = float(np.sum(np.abs(yaw_steps)))
+    yaw_monotonic_fraction = 1.0
+    if yaw_steps.size and abs(yaw_delta) > 1e-9:
+        yaw_monotonic_fraction = float(np.mean(np.sign(yaw_delta) * yaw_steps >= -1e-4))
+
     real_air = [t for t in hopper.air_times if t > 0.10]
     if hopper.state == "FLIGHT" and hopper.air_start is not None:
         t = data.time - hopper.air_start
@@ -102,9 +116,14 @@ def run(seconds=6.0, push_peak=None, stride=8):
     return {
         "seconds": data.time,
         "bias_joint2": initial_bias_joint2,
-        "link3_z_min": float(np.min(z_values[:step + 1])),
-        "link3_z_max": float(np.max(z_values[:step + 1])),
-        "link3_z_amp": float(np.max(z_values[:step + 1]) - np.min(z_values[:step + 1])),
+        "yaw_delta": yaw_delta,
+        "yaw_progress": yaw_progress,
+        "yaw_min": float(np.min(yaw_values)),
+        "yaw_max": float(np.max(yaw_values)),
+        "yaw_monotonic_fraction": yaw_monotonic_fraction,
+        "link3_z_min": float(np.min(z_values)),
+        "link3_z_max": float(np.max(z_values)),
+        "link3_z_amp": float(np.max(z_values) - np.min(z_values)),
         "mesh_min_z": float(min_z),
         "real_hops": len(real_air),
         "air_times": real_air,
@@ -122,12 +141,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seconds", type=float, default=6.0)
     parser.add_argument("--push", type=float, default=None)
+    parser.add_argument("--horizontal-force", type=float, default=HORIZONTAL_FORCE)
     parser.add_argument("--stride", type=int, default=8)
     args = parser.parse_args()
 
-    metrics = run(args.seconds, args.push, args.stride)
+    metrics = run(args.seconds, args.push, args.horizontal_force, args.stride)
     print(f"seconds: {metrics['seconds']:.3f}")
     print(f"bias_joint2: {metrics['bias_joint2']:.4f} N*m")
+    print(f"yaw_delta: {metrics['yaw_delta']:.4f} rad")
+    print(f"yaw_progress: {metrics['yaw_progress']:.4f} rad")
+    print(f"yaw_range: {metrics['yaw_min']:.4f} .. {metrics['yaw_max']:.4f} rad")
+    print(f"yaw_monotonic_fraction: {metrics['yaw_monotonic_fraction']:.3f}")
     print(f"link3_z_amp: {metrics['link3_z_amp']:.4f} m")
     print(f"link3_z_range: {metrics['link3_z_min']:.4f} .. {metrics['link3_z_max']:.4f} m")
     print(f"mesh_min_z: {metrics['mesh_min_z']:.4f} m")

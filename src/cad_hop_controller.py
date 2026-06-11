@@ -20,6 +20,7 @@ MIN_FLIGHT = 0.10
 PUSH_TIME = 0.15
 BLEND_TIME = 0.010
 PUSH_PEAK = 560.0
+HORIZONTAL_FORCE = 50.0
 
 FLIGHT_REF = np.array([0.26, -0.48])
 STANCE_REF = np.array([0.08, 0.0])
@@ -30,9 +31,10 @@ STANCE_KD = np.array([4.2, 3.8])
 
 
 class Hopper:
-    def __init__(self, model, push_peak=PUSH_PEAK):
+    def __init__(self, model, push_peak=PUSH_PEAK, horizontal_force=HORIZONTAL_FORCE):
         self.m = model
         self.push_peak = PUSH_PEAK if push_peak is None else push_peak
+        self.horizontal_force = HORIZONTAL_FORCE if horizontal_force is None else horizontal_force
         self.qa = {n: model.jnt_qposadr[self._jid(n)] for n in ("joint3", "joint4")}
         self.va = {n: model.jnt_dofadr[self._jid(n)] for n in ("joint3", "joint4")}
         self.foot_g = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "foot")
@@ -97,7 +99,14 @@ class Hopper:
         phase = stance_time / PUSH_TIME
         force = self.push_peak * self._bezier_pulse(phase)
         alpha = self._smooth01(stance_time / BLEND_TIME)
-        force_tau = self.foot_jac(data).T @ np.array([0.0, 0.0, -force])
+        foot_xy = data.site_xpos[self.foot_s, :2]
+        radial_norm = np.linalg.norm(foot_xy)
+        tangent = np.zeros(3)
+        if radial_norm > 1e-6:
+            radial = foot_xy / radial_norm
+            tangent[:2] = [-radial[1], radial[0]]
+        force_world = np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent
+        force_tau = self.foot_jac(data).T @ force_world
         stance_tau = force_tau + self._pd(data, STANCE_REF, STANCE_KP, STANCE_KD)
         return (1.0 - alpha) * self.flight(data) + alpha * stance_tau
 

@@ -44,7 +44,7 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
 ### Fase 4 - Maquina de estados y control hibrido (40 pts) -- parcial
 - [x] Bucle a 1 kHz y maquina FLIGHT/STANCE basada en contacto.
 - [x] Control cartesiano en vuelo (Jacobiano transpuesto, PD).
-- [x] Control de fuerza en apoyo (GRF via Jacobiano transpuesto).
+- [x] Control de fuerza en apoyo (GRF via Jacobiano transpuesto), con componente horizontal tangencial para avance alrededor del pilar.
 - [ ] Subir la energia del salto. Diagnostico: subir la fuerza de empuje NO
       sube el salto (el pitch del boom se topa en ~0.054 rad, el cuerpo sube
       ~4 cm con cualquier fuerza). El problema es que la pierna se extiende y
@@ -99,9 +99,9 @@ El profe quiere ver el modelo real saltando. Pasos:
        controlador CAD usa perfil de fuerza Bezier de 0.15 s, alpha de 10 ms y
        PD fuerte de pierna. Tambien se alineo la colision del pie con el
        extremo visual de Link4 y se agrego una capsula delgada de pierna baja.
-       En 6 s reporta 9 vuelos reales (>0.10 s), amplitud de Link3 ~0.238 m,
-       mesh_min_z ~0.112 m, estable y dentro de torque. El pie sigue siendo el
-       contacto dominante frente a la capsula de pierna.
+       En 6 s reporta 9 vuelos reales (>0.10 s), amplitud de Link3 ~0.321 m,
+       yaw_delta ~-1.76 rad, mesh_min_z ~0.112 m, estable y dentro de torque.
+       El pie sigue siendo el contacto dominante frente a la capsula de pierna.
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
 6. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
 
