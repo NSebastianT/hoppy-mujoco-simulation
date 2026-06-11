@@ -73,6 +73,7 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
     foot_contact_steps = 0
     leg_contact_steps = 0
     both_contact_steps = 0
+    startup_qvel_max = 0.0
     flight_peaks = []
     current_flight_peak = None
 
@@ -81,6 +82,8 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
         data.ctrl[:] = tau
         max_tau = np.maximum(max_tau, np.abs(tau))
         mujoco.mj_step(model, data)
+        if data.time <= 0.2:
+            startup_qvel_max = max(startup_qvel_max, float(np.max(np.abs(data.qvel))))
 
         z_values[step] = data.xpos[link3, 2]
         yaw_values[step] = data.qpos[joint1_q]
@@ -138,6 +141,7 @@ def run(seconds=6.0, push_peak=None, horizontal_force=HORIZONTAL_FORCE, stride=8
         "yaw_min": float(np.min(yaw_values)),
         "yaw_max": float(np.max(yaw_values)),
         "yaw_monotonic_fraction": yaw_monotonic_fraction,
+        "startup_qvel_max": startup_qvel_max,
         "first_hop_peak": float(first_hop_peak),
         "steady_peak": float(steady_peak),
         "first_to_steady_peak_ratio": float(peak_ratio),
@@ -173,6 +177,7 @@ def main():
     print(f"yaw_progress: {metrics['yaw_progress']:.4f} rad")
     print(f"yaw_range: {metrics['yaw_min']:.4f} .. {metrics['yaw_max']:.4f} rad")
     print(f"yaw_monotonic_fraction: {metrics['yaw_monotonic_fraction']:.3f}")
+    print(f"startup_qvel_max_0p2s: {metrics['startup_qvel_max']:.4f} rad/s")
     print(f"first_hop_peak: {metrics['first_hop_peak']:.4f} m")
     print(f"steady_peak: {metrics['steady_peak']:.4f} m")
     print(f"first_to_steady_peak_ratio: {metrics['first_to_steady_peak_ratio']:.3f}")

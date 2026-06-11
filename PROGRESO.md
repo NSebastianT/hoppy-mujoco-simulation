@@ -100,9 +100,9 @@ El profe quiere ver el modelo real saltando. Pasos:
        PD fuerte de pierna. Tambien se alineo la colision del pie con el
        extremo visual de Link4 y se agrego una capsula delgada de pierna baja.
        El stance incluye warmup de 1.0 s para evitar el lanzon inicial. En 6 s
-       reporta 9 vuelos reales (>0.10 s), first_hop_peak ~0.416 m,
-       steady_peak ~0.352 m, yaw_progress ~1.62 rad, monotonicidad de yaw
-       ~0.996, mesh_min_z ~0.112 m,
+       reporta 11 vuelos reales (>0.10 s), startup_qvel_max ~4.71 rad/s,
+       first_hop_peak ~0.384 m, steady_peak ~0.330 m, yaw_progress ~2.36 rad,
+       monotonicidad de yaw 1.000, mesh_min_z ~0.112 m,
        estable y dentro de torque. El pie sigue siendo el contacto dominante
        frente a la capsula de pierna.
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).

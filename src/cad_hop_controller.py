@@ -20,10 +20,11 @@ MIN_FLIGHT = 0.10
 PUSH_TIME = 0.15
 BLEND_TIME = 0.010
 PUSH_PEAK = 560.0
-HORIZONTAL_FORCE = 35.0
+HORIZONTAL_FORCE = -35.0
 WARMUP_TIME = 1.0
 WARMUP_START = 0.00
 STARTUP_SETTLE_FORCE = 210.0
+SOFT_ENGAGE_TIME = 0.50
 
 FLIGHT_REF = np.array([0.26, -0.48])
 STANCE_REF = np.array([0.08, 0.0])
@@ -139,7 +140,8 @@ class Hopper:
             tau = self.stance(data, data.time - self.stance_start)
         else:
             tau = self.flight(data)
-        return np.clip(tau, -TORQUE_LIMIT, TORQUE_LIMIT)
+        engage = self._smooth01(data.time / SOFT_ENGAGE_TIME)
+        return np.clip(engage * tau, -TORQUE_LIMIT, TORQUE_LIMIT)
 
 
 def build_model_and_data():
