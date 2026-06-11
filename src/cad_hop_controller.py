@@ -37,6 +37,7 @@ class Hopper:
         self.va = {n: model.jnt_dofadr[self._jid(n)] for n in ("joint3", "joint4")}
         self.foot_g = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "foot")
         self.floor_g = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "floor")
+        self.lower_leg_g = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "lower_leg_collision")
         self.foot_s = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, "foot_site")
         self.state = "FLIGHT"
         self.state_start = 0.0
@@ -62,7 +63,8 @@ class Hopper:
     def in_contact(self, data):
         for i in range(data.ncon):
             c = data.contact[i]
-            if {c.geom1, c.geom2} == {self.foot_g, self.floor_g}:
+            pair = {c.geom1, c.geom2}
+            if pair == {self.foot_g, self.floor_g} or pair == {self.lower_leg_g, self.floor_g}:
                 return True
         return False
 

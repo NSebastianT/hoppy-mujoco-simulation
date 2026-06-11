@@ -30,6 +30,10 @@ def mesh_points_for_body(model, body_name, stride=8):
         start = model.mesh_vertadr[mesh_id]
         count = model.mesh_vertnum[mesh_id]
         verts = model.mesh_vert[start:start + count:stride].copy()
+        mesh_mat = np.zeros(9)
+        mujoco.mju_quat2Mat(mesh_mat, model.mesh_quat[mesh_id])
+        mesh_mat = mesh_mat.reshape(3, 3)
+        verts = model.mesh_pos[mesh_id] + verts @ mesh_mat.T
         points.append((geom_id, verts))
     return points
 
@@ -50,6 +54,9 @@ def run(seconds=6.0, push_peak=None, stride=8):
     hopper.reset(data)
 
     link3 = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "Link3")
+    floor = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "floor")
+    foot = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "foot")
+    lower_leg = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "lower_leg_collision")
     body_meshes = mesh_points_for_body(model, "Link3", stride) + mesh_points_for_body(model, "Link4", stride)
 
     steps = int(seconds / model.opt.timestep)
@@ -57,6 +64,9 @@ def run(seconds=6.0, push_peak=None, stride=8):
     min_z = np.inf
     max_tau = np.zeros(2)
     finite = True
+    foot_contact_steps = 0
+    leg_contact_steps = 0
+    both_contact_steps = 0
 
     for step in range(steps):
         tau = hopper.control(data)
@@ -65,6 +75,16 @@ def run(seconds=6.0, push_peak=None, stride=8):
         mujoco.mj_step(model, data)
 
         z_values[step] = data.xpos[link3, 2]
+        foot_contact = False
+        leg_contact = False
+        for i in range(data.ncon):
+            pair = {data.contact[i].geom1, data.contact[i].geom2}
+            foot_contact = foot_contact or pair == {foot, floor}
+            leg_contact = leg_contact or pair == {lower_leg, floor}
+        foot_contact_steps += int(foot_contact)
+        leg_contact_steps += int(leg_contact)
+        both_contact_steps += int(foot_contact and leg_contact)
+
         if step % stride == 0:
             min_z = min(min_z, min_mesh_z(model, data, body_meshes))
         if not (np.all(np.isfinite(data.qpos)) and np.all(np.isfinite(data.qvel))):
@@ -89,6 +109,9 @@ def run(seconds=6.0, push_peak=None, stride=8):
         "max_tau": max_tau.tolist(),
         "within_torque": bool(np.all(max_tau <= TORQUE_LIMIT + 1e-9)),
         "liftoffs": hopper.liftoffs,
+        "foot_contact_steps": foot_contact_steps,
+        "leg_contact_steps": leg_contact_steps,
+        "both_contact_steps": both_contact_steps,
     }
 
 
@@ -110,6 +133,9 @@ def main():
     print(f"max_tau: hip={metrics['max_tau'][0]:.3f}, knee={metrics['max_tau'][1]:.3f} N*m")
     print(f"within_torque: {metrics['within_torque']}")
     print(f"liftoffs: {metrics['liftoffs']}")
+    print(f"foot_contact_steps: {metrics['foot_contact_steps']}")
+    print(f"leg_contact_steps: {metrics['leg_contact_steps']}")
+    print(f"both_contact_steps: {metrics['both_contact_steps']}")
 
 
 if __name__ == "__main__":
