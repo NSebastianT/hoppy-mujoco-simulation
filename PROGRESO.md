@@ -93,8 +93,16 @@ El profe quiere ver el modelo real saltando. Pasos:
 3. [x] Controlador hibrido portado (`src/cad_hop_controller.py`): el CAD SALTA
        con fisica (pie sube ~0.2 m, boom pitchea, estable). Esta es la version
        que se puede mostrar al profe: el modelo real saltando.
-4. [ ] Afinar el salto: hoy son saltos rapidos (22 en 6 s); falta hacerlos mas
-       limpios/altos (perfil de fuerza, timing de la maquina de estados).
+4. [ ] Afinar el salto (lo dificil). Diagnostico: el robot se ve "enterrado"
+       en el punto bajo porque el boom del CAD esta desbalanceado (par de
+       gravedad ~ -13 N*m en joint2) y se hunde; el modulo de cadera penetra el
+       piso ~7 cm. Probando contrapeso: el comportamiento es bimodal -- con poco
+       contrapeso se hunde/entierra pero salta, y con el suficiente para
+       balancear (~2 kg) la pierna sube y se queda flotando (no salta). No hay
+       punto intermedio simple. Conclusion: un salto limpio sin enterrarse
+       necesita rediseniar el controlador (push-off y aterrizaje propios, perfil
+       de fuerza Bezier, timing) y afinar el contrapeso junto con el control.
+       El contrapeso (que la rubrica pide) se agregara en ese rediseno.
 5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
 6. [ ] Render final del CAD saltando con fisica.
 
