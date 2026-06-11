@@ -11,23 +11,17 @@ The current simulation is not presented as a fully exact replica of the physical
 
 ## Branches
 
-```text
-main
-```
+`main`
 
-Stable simplified model with hybrid control. This is the safest branch for the basic working simulation.
+Final working branch. This branch contains the current version of the project: simplified MuJoCo dynamics, hybrid hopping control, and official HOPPY CAD visual meshes integrated into the simulation.
 
-```text
-repeat-hop-control
-```
+`repeat-hop-control`
 
-Experimental branch with an adaptive controller for repeated hopping. This branch produced the best repeated hopping behavior, but it is separate from `main`.
+Experimental branch with an adaptive controller for repeated hopping. This branch produced the best repeated hopping behavior, but it has not been merged into the CAD visual version yet.
 
-```text
-cad-official-hoppy
-```
+`cad-official-hoppy`
 
-Branch with official HOPPY CAD visual meshes integrated into the MuJoCo scene. This is the branch used for the version that visually resembles the real HOPPY.
+Development branch used to integrate the official HOPPY CAD meshes with FreeCAD. After merging, its relevant changes are included in `main`.
 
 ## Current model
 
