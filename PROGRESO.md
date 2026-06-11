@@ -79,6 +79,22 @@ Usar siempre el entorno `.venv-py312` (tiene mujoco, imageio y trimesh).
 
 - `models/hoppy.xml`: modelo fisico (capsulas) + controlador. Es el que simula.
 - `models/hoppy_cad_view.xml`: CAD oficial fiel armado del URDF. Solo visual.
+- `models/hoppy_cad_physics.xml`: CAD oficial con FISICA real (colision de pie,
+  actuadores, dinamica de joints). Es el objetivo para la presentacion: el
+  modelo real saltando, no las cajitas. Ya cae y contacta el piso bien; falta
+  portar el controlador y afinar el salto.
+
+## Plan para el objetivo final (CAD con fisica saltando)
+
+El profe quiere ver el modelo real saltando. Pasos:
+1. [x] Modelo CAD con fisica (`hoppy_cad_physics.xml`): colision de pie/piso,
+       motores en cadera/rodilla, armature/damping/resorte. Cae y apoya estable.
+2. [x] Prueba de caida (contacto valido, sin explotar).
+3. [ ] Portar el controlador hibrido a este modelo (Jacobiano del pie sobre
+       joint3/joint4, deteccion de contacto, FLIGHT/STANCE).
+4. [ ] Afinar el salto (resolver el liftoff prematuro, perfil de fuerza, timing).
+5. [ ] Contacto duro afinado (Fase 3), sensores y graficas (Fase 5).
+6. [ ] Render final del CAD saltando con fisica.
 
 Comandos:
 
