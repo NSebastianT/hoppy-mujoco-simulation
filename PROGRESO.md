@@ -44,11 +44,26 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
       salto hacia lo fisico; el baseline es el mas bajo porque tiene todos los
       limitantes activos. Es la validacion del modelo de actuador.
 
-### Fase 3 - Contacto pie-suelo (15 pts) -- pendiente
-- [ ] Ajuste de solref, solimp y friccion para contacto duro (minimizar rebotes,
-      penetracion y deslizamiento).
-- [~] Hay deteccion de contacto pie-suelo; falta justificar el criterio de
-      touchdown/liftoff.
+### Fase 3 - Contacto pie-suelo (15 pts) -- completa
+- [x] Contacto duro configurado y justificado (foot + floor):
+        solref = "0.01 1"  -> constante de tiempo 10 ms, razon de amortiguamiento
+                              1 (criticamente amortiguado): contacto rapido y sin
+                              rebote artificial.
+        solimp = "0.95 0.99 0.001" -> impedancia alta (rigido), poca compliance.
+        friction = "1.5 0.02 0.001" -> friccion tangencial alta -> minimo
+                              deslizamiento no deseado.
+- [x] Calidad de contacto medida (6 s de salto): penetracion maxima de la esfera
+      de colision ~18 mm (es invisible; la malla visible de la pierna se queda
+      >0.11 m sobre el piso, no se ve hundida); deslizamiento del pie en contacto
+      bajo (~0.18 m/s medio, casi todo es el avance tangencial intencional de las
+      vueltas, no slip); fuerza normal suave (pico ~256 N) sin multi-rebote por
+      aterrizaje. Endurecer mas solref/solimp no reduce la penetracion (es la
+      esfera chica en el impacto, no compliance).
+- [x] Criterio touchdown/liftoff: touchdown = par de geoms pie(o capsula de
+      pierna)-piso en contacto via los contactos de MuJoCo, con guarda de tiempo
+      minimo de vuelo (MIN_FLIGHT) para evitar chattering; liftoff = se pierde el
+      contacto pasado MIN_STANCE, o tope MAX_STANCE. Robusto a rebotes de contacto
+      por las guardas de tiempo minimo.
 
 ### Fase 4 - Maquina de estados y control hibrido (40 pts) -- parcial
 - [x] Bucle a 1 kHz y maquina FLIGHT/STANCE basada en contacto.
