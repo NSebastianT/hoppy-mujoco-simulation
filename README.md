@@ -14,6 +14,14 @@ the real motor limits, and continuous laps around the base. A second variant
 (`--no-cw`) removes the counterweight to show why it matters: the boom becomes
 leg-heavy and the robot can barely lift off.
 
+## Members
+
+- Gustavo Alexander Nuño Corvera
+- Luis Carlos Ortiz de Montellano Gómez
+- Jessely Santiago Bahena
+- Alfredo Garzon Murillo
+- Nabor Sebastian Toro García
+
 ## Repository layout
 
 Models (`models/`):
