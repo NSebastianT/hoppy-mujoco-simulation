@@ -35,6 +35,46 @@ Control and tools:
 Motor (goBilda 5202 26.9:1, VNH5019 driver at 12 V) sets the physical parameters:
 torque limit ~12-13 N*m (30 A peak), armature = N^2*Ir, damping = (kv*kt/Rw)*N^2.
 
+## Installation
+
+Prerequisites: Python 3.10 or newer, and git.
+
+Clone and enter the repo:
+
+```
+git clone https://github.com/NSebastianT/hoppy-mujoco-simulation.git
+cd hoppy-mujoco-simulation
+```
+
+Create the environment (named `.venv-py312` so the run commands below work as-is)
+and install the dependencies:
+
+Linux / macOS:
+
+```
+python3 -m venv .venv-py312
+.venv-py312/bin/python -m pip install -r requirements.txt
+```
+
+Windows (PowerShell):
+
+```
+py -m venv .venv-py312
+.venv-py312\Scripts\python -m pip install -r requirements.txt
+```
+
+Notes:
+- `requirements.txt` pulls MuJoCo, numpy, matplotlib, scipy, imageio (+ ffmpeg, so
+  no system ffmpeg is needed) and trimesh/fast-simplification (only for regenerating
+  the CAD meshes).
+- On Windows/macOS the run commands are the same but use
+  `.venv-py312\Scripts\python` instead of `.venv-py312/bin/python`.
+- The live MuJoCo viewer opens a GLFW window. On Windows/macOS it works directly;
+  on Linux with an Intel Xe GPU it crashes, so force the NVIDIA GPU (see "How to
+  run each part"). Offscreen renders (the `render_*` / mp4 scripts) are unaffected.
+
+See "How to run each part" below for usage.
+
 ## Branches
 
 `main`
