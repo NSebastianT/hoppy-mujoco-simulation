@@ -95,12 +95,13 @@ RS-555, driver Pololu VNH5019 a 12 V (BOM del equipo).
 - Velocidad libre 223 RPM, corriente libre 0.25 A.
 - Par de stall 3.73 N·m, corriente de stall 9.2 A.
 - Rw = V/Istall = 12/9.2 = 1.30 ohm.
-- kt = kv = 0.0186 (a partir de la velocidad libre).
-- Ir ~ 1e-5 kg·m^2 (estimado para RS-555; sustituir si conseguimos el dato).
-- N_cadera = 26.9, N_rodilla = 28.8.
-- armature = N^2*Ir -> 0.0072 (cadera), 0.0083 (rodilla).
-- damping = (kv*kt/Rw)*N^2 -> 0.192 (cadera), 0.220 (rodilla).
-- Torque por amp de salida = 3.73/9.2 = 0.405 N·m/A; a 30 A pico ~12-13 N·m.
+- VALORES NOMINALES OFICIALES (de HOPPY-Project/Simulator_MATLAB/get_params.m y
+  "List of nominal parameters.pdf", ya no estimados):
+  kt = 0.0135 N·m/A, kv = 0.0186 V·s/rad, Ir = 7e-6 kg·m^2.
+- N_cadera = 26.9, N_rodilla = 28.8. V_max = 12 V, I_max = 30 A (pico del driver).
+- armature = N^2*Ir -> 0.00507 (cadera), 0.00581 (rodilla).
+- damping = (kv*kt/Rw)*N^2 -> 0.140 (cadera), 0.160 (rodilla).
+- Torque pico = kt*N*I_max -> ~11-12 N·m; usamos saturacion +-12.2/13 N·m.
 
 ## Modelos y como correr
 

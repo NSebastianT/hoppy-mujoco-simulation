@@ -3,7 +3,8 @@
          driven by the hybrid controller. Motor: goBilda 5202 26.9:1 (RS-555),
          VNH5019 driver at 12 V. Reflected rotor inertia armature = N^2*Ir and
          back-EMF damping = (kv*kt/Rw)*N^2; knee carries a parallel spring.
-         Motor constants: Rw=1.30, kt=kv=0.0186, Ir~1e-5; N_hip=26.9, N_knee=28.8. -->
+         Motor (nominal oficial HOPPY-Project): Rw=1.30, kt=0.0135, kv=0.0186,
+         Ir=7e-6; N_hip=26.9, N_knee=28.8. -->
     <compiler angle="radian" coordinate="local"/>
 
     <option gravity="0 0 -9.81" timestep="0.001" integrator="RK4"
@@ -39,7 +40,7 @@
                 <body name="hip_body" pos="0.70 0 0">
                     <joint name="hip" type="hinge" axis="1 0 0"
                            limited="true" range="-1.8 1.8"
-                           damping="0.192" armature="0.0072"/>
+                           damping="0.140" armature="0.00507"/>
 
                     <geom name="hip_motor_mass" type="box" pos="0 0 0"
                           size="0.06 0.06 0.06" mass="0.18"
@@ -53,7 +54,7 @@
                     <body name="lower_leg_body" pos="0 0 -0.22">
                         <joint name="knee" type="hinge" axis="1 0 0"
                                limited="true" range="-2.4 0.2"
-                               damping="0.220" armature="0.0083"
+                               damping="0.160" armature="0.00581"
                                stiffness="2.0" springref="-0.7"/>
 
                         <geom name="lower_leg" type="capsule"
