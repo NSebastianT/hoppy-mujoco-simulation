@@ -9,6 +9,32 @@ The project currently has two working directions:
 
 The current simulation is not presented as a fully exact replica of the physical HOPPY robot. The dynamics are simplified on purpose so the model can be controlled, tested, logged, and explained. The official CAD geometry is used mainly to improve visual fidelity.
 
+## Code overview (key files)
+
+Models:
+- `models/hoppy_cad_physics.xml` - official CAD (from the HOPPY-E0 URDF) turned into
+  a physics model: 4 DoF (yaw+pitch passive, hip+knee active), foot collision,
+  hip/knee motors with torque limits, reflected-inertia armature, back-EMF damping,
+  knee parallel spring, and a counterweight folded into the boom inertia. This is the
+  model used for the presentation (the real robot hopping with physics).
+- `models/hoppy_cad_view.xml` - faithful CAD assembly from the URDF, visual only.
+- `models/hoppy.xml` - simplified capsule model used to develop and tune the controller.
+
+Control and tools:
+- `src/cad_hop_controller.py` - hybrid FLIGHT/STANCE hopping controller for the CAD
+  model: transposed-Jacobian Cartesian PD in flight, desired ground-reaction force
+  with a Bezier profile in stance (vertical = hop, tangential = travel), smooth
+  state transition and soft startup, torque saturation, and encoder-emulated joint
+  velocity (no raw qvel). Renders the hop to an MP4.
+- `src/view_cad_hop.py` - interactive live viewer (for the demo).
+- `src/run_cad_logged.py` - logs all states to a CSV and generates the rubric plots.
+- `tools/eval_cad_hop.py` - headless metrics (hop quality, contact, torque, yaw).
+- `tools/compare_actuator.py` - Phase 2 comparison of armature/damping/spring/saturation.
+- `PROGRESO.md` - living progress and coordination log (phase-by-phase status).
+
+Motor (goBilda 5202 26.9:1, VNH5019 driver at 12 V) sets the physical parameters:
+torque limit ~12-13 N*m (30 A peak), armature = N^2*Ir, damping = (kv*kt/Rw)*N^2.
+
 ## Branches
 
 `main`
