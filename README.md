@@ -382,30 +382,43 @@ limitations
 next steps
 ```
 
-## How to run
+## How to run each part
 
-Activate the environment:
+Use the `.venv-py312` environment and run from the repo root. Generated outputs
+go to `results/` (gitignored). On Linux the interactive viewer must be forced
+onto the NVIDIA GPU (the Intel Xe GL crashes it); on Windows/macOS run it plainly.
 
-```bat
-conda activate hoppy_mujoco
+Deliverable - the official CAD hopping with real physics:
+
+```
+# live, interactive (Linux):
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia .venv-py312/bin/python src/view_cad_hop.py
+.venv-py312/bin/python src/view_cad_hop.py --no-cw     # version without the counterweight
+
+# render to mp4 (results/renders/):
+.venv-py312/bin/python src/cad_hop_controller.py          # with counterweight  -> cad_hopping.mp4
+.venv-py312/bin/python src/cad_hop_controller.py --no-cw  # without (it sinks)  -> cad_hopping_nocw.mp4
 ```
 
-Go to the project folder:
+Per rubric phase:
 
-```bat
-cd /d C:\Users\nabor\OneDrive\Escritorio\6to\Humanoides\hoppy-mujoco-simulation
+```
+# Phase 5 - sensors: CSV + plots (encoder velocity, contact force, torques, state):
+.venv-py312/bin/python src/run_cad_logged.py        # -> results/logs/cad_states.csv, results/plots/cad_*.png
+
+# Phase 2 - actuator: comparison of armature/damping/spring/saturation:
+.venv-py312/bin/python tools/compare_actuator.py    # -> results/plots/cad_comparison_height.png
+
+# metrics (hop quality, contact, torque, yaw):
+.venv-py312/bin/python tools/eval_cad_hop.py
 ```
 
-Run the interactive controller:
+Visual-only CAD and the simplified development model:
 
-```bat
-python src\hybrid_controller_test.py
 ```
-
-Run the logged simulation:
-
-```bat
-python src\run_logged_simulation.py
+.venv-py312/bin/python src/render_cad_view.py       # CAD 360 spin (no physics)
+.venv-py312/bin/python src/render_simulation.py     # simplified capsule model hopping
+.venv-py312/bin/python src/run_logged_simulation.py # simplified model logs + plots
 ```
 
 ## Headless rendering (videos, cross-platform)
