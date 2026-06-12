@@ -39,7 +39,9 @@
                 <inertial pos="1.19035e-06 -7.23296e-08 0.110977"
                           quat="0.999539 -3.72317e-07 -1.22626e-05 -0.0303481"
                           mass="1.05189" diaginertia="0.0015755 0.00119525 0.000930447"/>
-                <joint name="joint1" pos="0 0 0" axis="0 0 1" range="-3.14 3.14"
+                <!-- Continuous yaw: the gantry spins freely around the base
+                     (no hard stop on the real robot nor in the MATLAB sim). -->
+                <joint name="joint1" pos="0 0 0" axis="0 0 1"
                        damping="0.02" armature="0.01"/>
                 <geom mesh="Link1" rgba="0.30 0.42 0.80 1"/>
 
@@ -53,13 +55,14 @@
                     <geom mesh="Link2" rgba="0.62 0.62 0.64 1"/>
 
                     <!-- Counterweight, visual only (its mass is folded into the
-                         Link2 inertia). Three weights clustered at the boom end. -->
-                    <geom name="cw_1" type="capsule" fromto="0.40 0 0.055 0.57 0 0.055"
-                          size="0.042" contype="0" conaffinity="0" density="0" rgba="0.13 0.13 0.15 1"/>
-                    <geom name="cw_2" type="capsule" fromto="0.40 -0.048 -0.028 0.57 -0.048 -0.028"
-                          size="0.042" contype="0" conaffinity="0" density="0" rgba="0.13 0.13 0.15 1"/>
-                    <geom name="cw_3" type="capsule" fromto="0.40 0.048 -0.028 0.57 0.048 -0.028"
-                          size="0.042" contype="0" conaffinity="0" density="0" rgba="0.13 0.13 0.15 1"/>
+                         Link2 inertia). Two weights clamped to the boom near its
+                         end, matching the real robot. -->
+                    <geom name="cw_clamp" type="box" pos="0.34 0 -0.038" size="0.022 0.03 0.05"
+                          contype="0" conaffinity="0" density="0" rgba="0.50 0.50 0.55 1"/>
+                    <geom name="cw_1" type="capsule" fromto="0.27 0 0.007 0.41 0 0.007"
+                          size="0.028" contype="0" conaffinity="0" density="0" rgba="0.13 0.13 0.15 1"/>
+                    <geom name="cw_2" type="capsule" fromto="0.27 0 -0.083 0.41 0 -0.083"
+                          size="0.028" contype="0" conaffinity="0" density="0" rgba="0.13 0.13 0.15 1"/>
 
                     <body name="Link3" pos="-0.6585 0 0.0425"
                           quat="0.677009 -0.204104 -0.677009 0.204104">

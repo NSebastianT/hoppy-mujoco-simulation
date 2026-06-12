@@ -23,7 +23,6 @@ PUSH_PEAK = 560.0
 HORIZONTAL_FORCE = 35.0
 WARMUP_TIME = 1.0
 WARMUP_START = 0.00
-STARTUP_SETTLE_FORCE = 210.0
 SOFT_ENGAGE_TIME = 0.50
 ENCODER_COUNTS_PER_REV = 751.8
 ENCODER_STEP = 2.0 * np.pi / ENCODER_COUNTS_PER_REV
@@ -31,7 +30,8 @@ VELOCITY_FILTER_LAMBDA = 15.0
 
 FLIGHT_REF = np.array([0.26, -0.48])
 STANCE_REF = np.array([0.08, 0.0])
-FLIGHT_KP = np.array([16.0, 14.0])
+FLIGHT_KP_CART = 200.0
+FLIGHT_POSTURE_KP = np.array([8.0, 7.0])
 FLIGHT_KD = np.array([1.3, 1.2])
 STANCE_KP = np.array([72.0, 64.0])
 STANCE_KD = np.array([4.2, 3.8])
@@ -58,6 +58,7 @@ class Hopper:
         self.q_meas = np.zeros(2)
         self.v_est = np.zeros(2)
         self.prev_q_meas = None
+        self._fk = mujoco.MjData(model)
 
     def _jid(self, name):
         return mujoco.mj_name2id(self.m, mujoco.mjtObj.mjOBJ_JOINT, name)
@@ -121,8 +122,22 @@ class Hopper:
         om = 1.0 - x
         return 3.0 * om * om * x * 1.35 + 3.0 * om * x * x * 1.35
 
+    def flight_target(self, data):
+        # foot position the reference pose would give at the current yaw/pitch
+        self._fk.qpos[:] = data.qpos
+        self._fk.qpos[self.qa["joint3"]] = FLIGHT_REF[0]
+        self._fk.qpos[self.qa["joint4"]] = FLIGHT_REF[1]
+        mujoco.mj_kinematics(self.m, self._fk)
+        return self._fk.site_xpos[self.foot_s].copy()
+
     def flight(self, data):
-        return self._pd(data, FLIGHT_REF, FLIGHT_KP, FLIGHT_KD)
+        # cartesian PD on the foot via the transposed Jacobian, plus a weak
+        # joint posture term: hip and knee move the foot in nearly the same
+        # direction here, so J^T alone leaves one joint direction unstiffened
+        q = np.array([data.qpos[self.qa["joint3"]], data.qpos[self.qa["joint4"]]])
+        err = self.flight_target(data) - data.site_xpos[self.foot_s]
+        tau = self.foot_jac(data).T @ (FLIGHT_KP_CART * err)
+        return tau + FLIGHT_POSTURE_KP * (FLIGHT_REF - q) - FLIGHT_KD * self.v_est
 
     def stance(self, data, stance_time):
         phase = stance_time / PUSH_TIME
@@ -135,9 +150,11 @@ class Hopper:
         if radial_norm > 1e-6:
             radial = foot_xy / radial_norm
             tangent[:2] = [-radial[1], radial[0]]
-        force_world = warmup * np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent + (1.0 - warmup) * np.array([0.0, 0.0, STARTUP_SETTLE_FORCE])
+        # the warmup only ramps the Bezier push; the posture PD runs at full
+        # strength from the start so the leg never gets cranked while weak
+        force_world = warmup * np.array([0.0, 0.0, -force]) + self.horizontal_force * tangent
         force_tau = self.foot_jac(data).T @ force_world
-        stance_tau = force_tau + warmup * self._pd(data, STANCE_REF, STANCE_KP, STANCE_KD)
+        stance_tau = force_tau + self._pd(data, STANCE_REF, STANCE_KP, STANCE_KD)
         return (1.0 - alpha) * self.flight(data) + alpha * stance_tau
 
     def update_state(self, data):
@@ -161,8 +178,11 @@ class Hopper:
 
     def control(self, data):
         self.update_encoder(data)
-        self.update_state(data)
-        if self.state == "STANCE":
+        contact = self.update_state(data)
+        # the GRF push only makes sense while the foot is really on the
+        # ground; without this gate the Bezier force keeps whipping the leg
+        # after liftoff and the impacts rectify it into backwards rotation
+        if self.state == "STANCE" and contact:
             tau = self.stance(data, data.time - self.stance_start)
         else:
             tau = self.flight(data)
@@ -186,7 +206,7 @@ def _remove_counterweight(model):
     model.body_ipos[b] = _LINK2_NO_CW["ipos"]
     model.body_inertia[b] = _LINK2_NO_CW["inertia"]
     model.body_iquat[b] = _LINK2_NO_CW["iquat"]
-    for name in ("cw_1", "cw_2", "cw_3"):
+    for name in ("cw_1", "cw_2", "cw_clamp"):
         g = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
         model.geom_rgba[g][3] = 0.0
 
