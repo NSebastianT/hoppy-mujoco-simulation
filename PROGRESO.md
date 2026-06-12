@@ -186,11 +186,13 @@ arriba; ya probado y funciona. Para grabar mp4 se usan los renders offscreen.
 
 ## Limitaciones conocidas
 
-- Rebote de rodilla en vuelo: la pierna "rebota" en el aire por el resorte
-  paralelo real (jala a springref=0) peleando con la referencia de vuelo. No es
-  un bug; es el resorte de HOPPY (diseno/rubrica). Se bajo la rigidez de 2.0 a
-  1.0 (valor estimado) para reducir el rebote ~33% sin afectar el salto; no se
-  elimina del todo porque es la naturaleza del resorte.
+- Rebote de rodilla en vuelo: practicamente RESUELTO en el modelo con
+  contrapeso (el que se presenta). Con el PD cartesiano de vuelo la oscilacion
+  de rodilla en el aire quedo en ~0.5 grados pico a pico (imperceptible).
+  Historial: el resorte paralelo real (jala a springref=0) peleaba con el PD
+  articular viejo; se bajo la rigidez de 2.0 a 1.0 y el control cartesiano
+  termino de calmarlo. En la version --no-cw queda un twitch puntual de rodilla
+  en sus saltitos cortos (resorte + encoder), inherente a esa variante.
 - Vueltas: RESUELTO. El "estancamiento a media vuelta" era el tope
   range="-3.14 3.14" del joint de yaw heredado del export URDF: el robot
   chocaba con el limite en pi y rebotaba. El gantry real no tiene tope (el

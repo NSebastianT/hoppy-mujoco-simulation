@@ -234,13 +234,12 @@ cad_hybrid_state.png         FLIGHT/STANCE state over time
 
 ## Current limitations
 
-- The knee oscillates a little in flight: the real parallel spring pulls
-  against the flight pose and the controller works with encoder-estimated
-  velocity (quantized, filtered, delayed). It is inherent to the realistic
-  sensor + spring, not a bug.
-- The `--no-cw` variant advances slowly and in small jerks. That is the
-  leg-heavy dynamics it is meant to demonstrate: tiny hops, and the inelastic
-  landings erase the angular momentum each cycle.
+- The `--no-cw` variant advances slowly and in small jerks, with a brief knee
+  twitch each cycle (the real parallel spring plus the encoder-estimated
+  velocity, in a regime of 0.1 s hops). That is the leg-heavy dynamics it is
+  meant to demonstrate: tiny hops, and the inelastic landings erase the
+  angular momentum each cycle. In the counterweight model the knee oscillation
+  in flight is negligible (~0.5 deg peak to peak).
 - The CAD meshes are visual only; contact uses a foot sphere and a leg capsule
   aligned with the mesh (hard contact, ~2.7 mm steady penetration of the
   invisible sphere; the visible mesh never touches the floor).
