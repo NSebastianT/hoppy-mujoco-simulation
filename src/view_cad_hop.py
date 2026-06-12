@@ -14,13 +14,15 @@ import time
 os.environ.setdefault("MUJOCO_GL", "glfw")
 
 import mujoco
+import sys
 import mujoco.viewer
 
 from cad_hop_controller import build_model_and_data, Hopper
 
 
 def main():
-    model, data = build_model_and_data()
+    with_cw = "--no-cw" not in sys.argv
+    model, data = build_model_and_data(with_counterweight=with_cw)
     hopper = Hopper(model)
     hopper.reset(data)
 

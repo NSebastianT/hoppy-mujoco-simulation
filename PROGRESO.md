@@ -144,6 +144,7 @@ El profe quiere ver el modelo real saltando. Pasos:
 Comandos:
 
     .venv-py312/bin/python src/cad_hop_controller.py    # CAD con fisica saltando -> results/renders/cad_hopping.mp4
+    .venv-py312/bin/python src/cad_hop_controller.py --no-cw  # version SIN contrapeso (se hunde) -> cad_hopping_nocw.mp4
     .venv-py312/bin/python src/render_simulation.py     # cajitas saltando -> results/renders/hopping.mp4
     .venv-py312/bin/python src/render_cad_view.py       # CAD quieto (giro) -> results/renders/cad_view.mp4
     .venv-py312/bin/python src/run_logged_simulation.py # log y graficas en results/

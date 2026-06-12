@@ -170,8 +170,31 @@ class Hopper:
         return np.clip(engage * tau, -TORQUE_LIMIT, TORQUE_LIMIT)
 
 
-def build_model_and_data():
+# Link2 inertia without the counterweight (official URDF export values): the boom
+# becomes leg-heavy and the robot sinks, which shows why the counterweight matters.
+_LINK2_NO_CW = {
+    "mass": 1.87654,
+    "ipos": [-0.513966, 0.0016327, -0.00902703],
+    "inertia": [0.0636508, 0.0630427, 0.00259304],
+    "iquat": [0.500001, 0.500001, 0.499999, 0.499999],
+}
+
+
+def _remove_counterweight(model):
+    b = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "Link2")
+    model.body_mass[b] = _LINK2_NO_CW["mass"]
+    model.body_ipos[b] = _LINK2_NO_CW["ipos"]
+    model.body_inertia[b] = _LINK2_NO_CW["inertia"]
+    model.body_iquat[b] = _LINK2_NO_CW["iquat"]
+    for name in ("cw_1", "cw_2", "cw_3"):
+        g = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, name)
+        model.geom_rgba[g][3] = 0.0
+
+
+def build_model_and_data(with_counterweight=True):
     model = mujoco.MjModel.from_xml_path(str(MODEL))
+    if not with_counterweight:
+        _remove_counterweight(model)
     data = mujoco.MjData(model)
     mujoco.mj_resetDataKeyframe(model, data, 0)
     mujoco.mj_forward(model, data)
@@ -179,10 +202,13 @@ def build_model_and_data():
 
 
 def main():
-    out_path = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "results" / "renders" / "cad_hopping.mp4"
-    seconds = float(sys.argv[2]) if len(sys.argv) > 2 else 6.0
+    args = [a for a in sys.argv[1:] if a != "--no-cw"]
+    with_cw = "--no-cw" not in sys.argv
+    default_name = "cad_hopping.mp4" if with_cw else "cad_hopping_nocw.mp4"
+    out_path = Path(args[0]) if len(args) > 0 else ROOT / "results" / "renders" / default_name
+    seconds = float(args[1]) if len(args) > 1 else 6.0
 
-    model, data = build_model_and_data()
+    model, data = build_model_and_data(with_counterweight=with_cw)
     hopper = Hopper(model)
     hopper.reset(data)
 
@@ -206,7 +232,8 @@ def main():
 
     renderer.close()
     out = write_video(frames, out_path, fps=FPS)
-    print(f"Wrote {len(frames)} frames, {hopper.liftoffs} liftoffs -> {out}")
+    cw = "with counterweight" if with_cw else "WITHOUT counterweight"
+    print(f"Wrote {len(frames)} frames, {hopper.liftoffs} liftoffs ({cw}) -> {out}")
 
 
 if __name__ == "__main__":
