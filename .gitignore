@@ -227,6 +227,3 @@ BOM - HOPPY.xlsx
 
 # Official CAD source archive (17 MB; meshes are decimated into assets/ instead)
 HOPPY-E0-final.zip
-
-# Generated outputs (render videos, simulation logs and plots)
-results/
