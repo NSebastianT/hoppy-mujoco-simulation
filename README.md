@@ -2,12 +2,13 @@
 
 This repository contains a MuJoCo simulation of HOPPY, a dynamic single-legged robot designed to hop around a fixed gantry.
 
-The project currently has two working directions:
-
-1. A simplified dynamic MuJoCo model that can hop.
-2. A CAD-based visual version that uses official HOPPY STEP files exported with FreeCAD.
-
-The current simulation is not presented as a fully exact replica of the physical HOPPY robot. The dynamics are simplified on purpose so the model can be controlled, tested, logged, and explained. The official CAD geometry is used mainly to improve visual fidelity.
+The deliverable is the official HOPPY CAD model hopping with real physics: the
+URDF assembly with the nominal motor parameters (reflected rotor inertia,
+back-EMF damping, torque limits), the knee parallel spring, hard foot-ground
+contact, and a hybrid FLIGHT/STANCE controller. A simplified capsule model is
+kept alongside for development. Collision geometry is intentionally simple (a
+foot sphere and a leg capsule aligned with the meshes); everything else comes
+from the official HOPPY data.
 
 ## Code overview (key files)
 
@@ -79,37 +80,43 @@ See "How to run each part" below for usage.
 
 `main`
 
-Final working branch. This branch contains the current version of the project: simplified MuJoCo dynamics, hybrid hopping control, and official HOPPY CAD visual meshes integrated into the simulation.
+Delivery branch (tagged releases v1.0.x). Contains the official CAD model
+hopping with real physics and the hybrid controller.
 
-`repeat-hop-control`
+`develop`
 
-Experimental branch with an adaptive controller for repeated hopping. This branch produced the best repeated hopping behavior, but it has not been merged into the CAD visual version yet.
+Integration branch. Work lands here before going to `main`.
 
-`cad-official-hoppy`
+`rubric-physics`
 
-Development branch used to integrate the official HOPPY CAD meshes with FreeCAD. After merging, its relevant changes are included in `main`.
+Current working branch for the physics/rubric phases.
+
+`cad-official-hoppy`, `repeat-hop-control`, `cad-in-action`
+
+Older development branches (CAD mesh integration, early controller experiments,
+kinematic CAD animation). Their relevant changes are already in `main`.
 
 ## Current model
 
-The MuJoCo model currently uses:
-
-- one passive gantry pitch joint,
-- one actuated hip joint,
-- one actuated knee joint,
-- a counterweight,
-- a foot contact point,
-- simple collision geometry,
-- official CAD meshes as visual geometry.
-
-The current dynamic model has three generalized coordinates:
+The deliverable is `models/hoppy_cad_physics.xml`: the official CAD assembly
+(URDF meshes and joint transforms) turned into a physics model. It has the four
+HOPPY degrees of freedom:
 
 ```text
-gantry_pitch
-hip
-knee
+yaw      (gantry, passive, continuous - no hard stop, like the real rig)
+pitch    (gantry, passive)
+hip      (actuated)
+knee     (actuated)
 ```
 
-The official HOPPY CAD model has more mechanical detail than the current dynamic model. For now, the full linkage is not rebuilt as a complete multi-joint mechanism. Instead, the simulation uses simplified bodies for dynamics and official CAD meshes for visualization.
+plus the counterweight on the boom, reflected rotor inertia (`armature`),
+equivalent back-EMF damping, the knee parallel spring, torque-limited motors,
+and foot/lower-leg collision geometry against the floor. The CAD meshes are
+visual only; contact uses a foot sphere and a thin leg capsule aligned with the
+mesh.
+
+`models/hoppy.xml` is the earlier simplified capsule model, kept for
+development and quick tuning.
 
 ## Official CAD integration
 
@@ -133,24 +140,31 @@ To regenerate them from the official export:
 python tools/prepare_cad_view_meshes.py path/to/HOPPY-E0-final/meshes
 ```
 
-The simplified physics model `models/hoppy.xml` (capsules + the tuned
-controller) is kept separate and is what the simulation actually runs. An
-earlier attempt that overlaid hand-placed FreeCAD meshes on that physics model
-was removed in favor of the faithful URDF-based view above.
+The same URDF data is the basis of `models/hoppy_cad_physics.xml`, which adds
+the physics on top (collision, actuators, joint dynamics) and is what the
+simulation runs. An earlier attempt that overlaid hand-placed FreeCAD meshes on
+the capsule model was removed in favor of the faithful URDF-based assembly.
 
 ## Main files
 
 ```text
-models/hoppy.xml
-src/hybrid_controller_test.py
-src/run_logged_simulation.py
+models/hoppy_cad_physics.xml
+src/cad_hop_controller.py
+src/view_cad_hop.py
+src/run_cad_logged.py
+tools/eval_cad_hop.py
+tools/compare_actuator.py
 ```
 
-`models/hoppy.xml` defines the MuJoCo model.
+`models/hoppy_cad_physics.xml` defines the model that simulates.
 
-`src/hybrid_controller_test.py` runs the interactive hybrid controller test.
+`src/cad_hop_controller.py` has the hybrid controller (`Hopper`) and renders
+the hopping to mp4; `src/view_cad_hop.py` runs the same controller in the
+interactive viewer. Both accept `--no-cw` for the no-counterweight variant.
 
-`src/run_logged_simulation.py` generates logs and plots for analysis.
+`src/run_cad_logged.py` generates the CSV and the rubric plots;
+`tools/eval_cad_hop.py` prints headless metrics and `tools/compare_actuator.py`
+runs the phase 2 comparison sims.
 
 ## Controller
 
@@ -168,259 +182,75 @@ foot
 floor
 ```
 
-During `FLIGHT`, the controller uses a joint-space PD controller to keep the leg in a reasonable posture before landing.
+During `FLIGHT`, the controller runs a Cartesian PD on the foot through the
+transposed Jacobian (`tau = J^T Kp (pd - p) - Kd qdot`, with the velocity
+estimated from the emulated encoder), plus a weak joint posture term, to keep
+the leg in a landing posture.
 
-During `STANCE`, the controller computes the foot Jacobian and applies a desired vertical foot force using:
+During `STANCE`, the controller computes the foot Jacobian and applies a desired ground-reaction force, while the foot is actually in contact, using:
 
 ```text
 tau = J^T F
 ```
 
-This generates a vertical push during ground contact.
+The vertical Bezier profile produces the jump and the tangential component drives the robot around the gantry.
 
-The actuator commands are saturated using a torque limit:
+The actuator commands are saturated at the real motor torque limits:
 
 ```text
-TORQUE_LIMIT = 35.0
+TORQUE_LIMIT = [12.2, 13.0]  # N*m, hip / knee
 ```
 
 ## What works
 
-The current project already has:
-
-- a MuJoCo model that loads correctly,
-- a working floor contact,
-- touchdown detection,
-- lift-off detection,
-- a `FLIGHT / STANCE` hybrid state machine,
-- torque saturation,
-- a Jacobian-based stance push,
-- a simplified model that can hop,
-- official HOPPY CAD visual meshes loaded into MuJoCo,
-- an official-looking gantry visual integrated into the dynamic scene,
-- generated plots from logged simulations.
+- The official CAD model hops with real physics: steady ~0.40 m peaks, ~0.6 s
+  flights, torques inside the motor limits.
+- It laps the gantry continuously (the yaw advances monotonically, full turns).
+- Touchdown/lift-off detection from MuJoCo contacts, with the ground-reaction
+  push applied only while the foot is actually in contact.
+- The `--no-cw` variant shows the counterweight's role: leg-heavy boom, the
+  robot sinks and can barely hop.
+- Encoder-emulated velocity (quantized position + filtered derivative) drives
+  the controller; raw `qvel` is not used for feedback.
+- CSV logging and all rubric plots regenerate from `src/run_cad_logged.py`.
 
 ## Plots already generated
 
-The project generated plots for:
+`src/run_cad_logged.py` writes `results/logs/cad_states.csv` and these plots to
+`results/plots/`:
 
 ```text
-joint_positions.png
-estimated_velocities.png
-foot_position.png
-foot_world_z.png
-hip_height.png
-normal_force.png
-hybrid_state.png
-torques.png
-gantry_pitch.png
-gantry_pitch_velocity.png
-foot_relative_position.png
-foot_vertical_velocity.png
+cad_joint_positions.png      joint positions (hip, knee, gantry)
+cad_joint_velocities.png     true vs encoder-estimated joint velocities
+cad_foot_position.png        Cartesian foot position
+cad_foot_velocity.png        true vs estimated Cartesian foot velocity
+cad_contact_force.png        normal contact force
+cad_torques.png              motor torques vs the saturation limits
+cad_hybrid_state.png         FLIGHT/STANCE state over time
 ```
 
-These plots were used to analyze:
-
-- joint motion,
-- estimated velocity,
-- foot height,
-- hip height,
-- contact timing,
-- normal force,
-- hybrid state transitions,
-- torque commands,
-- gantry pitch motion.
-
-The plots should be regenerated from the final selected branch before delivery, because the controller and visual model changed during development.
+`tools/compare_actuator.py` adds `cad_comparison_height.png` (phase 2). The
+`results/` folder is gitignored, so regenerate before the presentation.
 
 ## Current limitations
 
-The current simulation is still simplified.
-
-Important limitations:
-
-- The visual CAD geometry is not used for contact.
-- Contact still uses simple MuJoCo collision geometry.
-- The model does not yet use CAD-derived inertias.
-- The full official HOPPY linkage has not been rebuilt as a complete multi-joint mechanism.
-- The current dynamic model only uses gantry pitch, hip, and knee.
-- The CAD visual offsets still need tuning.
-- The adaptive repeated hopping controller is in `repeat-hop-control`, not merged into `cad-official-hoppy`.
-- The current `cad-official-hoppy` branch prioritizes visual integration over final control tuning.
+- The knee oscillates a little in flight: the real parallel spring pulls
+  against the flight pose and the controller works with encoder-estimated
+  velocity (quantized, filtered, delayed). It is inherent to the realistic
+  sensor + spring, not a bug.
+- The `--no-cw` variant advances slowly and in small jerks. That is the
+  leg-heavy dynamics it is meant to demonstrate: tiny hops, and the inelastic
+  landings erase the angular momentum each cycle.
+- The CAD meshes are visual only; contact uses a foot sphere and a leg capsule
+  aligned with the mesh (hard contact, ~2.7 mm steady penetration of the
+  invisible sphere; the visible mesh never touches the floor).
 
 ## Pending work
 
-These are the remaining tasks.
-
-### 1. Decide the final delivery branch
-
-Choose which branch will be used for the final demo:
-
-```text
-main
-repeat-hop-control
-cad-official-hoppy
-```
-
-Recommended path:
-
-```text
-cad-official-hoppy
-```
-
-because it includes the official CAD visual model.
-
-Then decide whether to merge the adaptive hopping controller from:
-
-```text
-repeat-hop-control
-```
-
-into:
-
-```text
-cad-official-hoppy
-```
-
-### 2. Regenerate all plots
-
-Run the logged simulation again from the final branch.
-
-Expected output:
-
-```text
-results/logs/hybrid_log.csv
-results/plots/*.png
-```
-
-The plots should include at least:
-
-```text
-joint positions
-joint/foot estimated velocities
-foot height
-hip height
-normal force
-hybrid state
-torques
-gantry pitch
-gantry pitch velocity
-```
-
-These plots are needed for the report and presentation.
-
-### 3. Tune the CAD visual alignment
-
-The CAD meshes are loaded and visible, but some offsets still need adjustment.
-
-Things to check:
-
-```text
-Link2 gantry alignment
-Link3 upper-leg alignment
-Link4 lower-leg/foot alignment
-hip area visual overlap
-counterweight visual position
-```
-
-This is visual tuning only. It should not change the collision geometry unless needed.
-
-### 4. Decide whether to keep the static CAD reference
-
-The scene currently can include a static official CAD reference model.
-
-For the final demo, decide whether to:
-
-```text
-keep it as a comparison reference
-```
-
-or
-
-```text
-remove it to keep the scene clean
-```
-
-### 5. Decide what to do with the black simplified hip box
-
-The black box is useful dynamically because it represents mass near the hip.
-
-For the final visual version, decide whether to:
-
-```text
-keep it opaque
-make it transparent
-reduce its size
-hide it visually but keep an equivalent inertial body
-```
-
-The safest option is to keep the simple mass for dynamics and make it less visually dominant.
-
-### 6. Confirm model scope with the professor
-
-Ask whether the expected final model is:
-
-```text
-a simplified MuJoCo dynamic model with official CAD visuals
-```
-
-or
-
-```text
-a full CAD/URDF-style reconstruction of the official HOPPY mechanism
-```
-
-This matters because the current model is not a full reconstruction of every official mechanical joint.
-
-### 7. Document simplifications clearly
-
-The report should clearly state:
-
-```text
-The model uses simplified collision geometry.
-The CAD meshes are visual only.
-The controller is tested on the simplified dynamic model.
-The official CAD improves visual fidelity but does not define contact dynamics.
-```
-
-### 8. Compare controller versions
-
-Compare at least two versions:
-
-```text
-stable Jacobian controller
-adaptive repeated hopping controller
-```
-
-Explain which one is more stable and which one produces better hopping.
-
-### 9. Verify torque saturation
-
-The controller clips torque commands.
-
-Before delivery, check plots or terminal output to confirm:
-
-```text
-maximum hip torque
-maximum knee torque
-whether either actuator saturates
-```
-
-### 10. Prepare final explanation
-
-The final explanation should cover:
-
-```text
-model structure
-contact detection
-FLIGHT / STANCE state machine
-Jacobian stance control
-torque saturation
-logged plots
-CAD visual integration
-limitations
-next steps
-```
+- Write the report and presentation. The material is ready: this README,
+  `PROGRESO.md`, the plots in `results/plots/`, the CSV log and the rendered
+  videos.
+- Regenerate `results/` from the delivery branch before presenting.
 
 ## How to run each part
 
@@ -526,22 +356,26 @@ tools/export_step_meshes_freecad.py
 The project should be presented as:
 
 ```text
-A MuJoCo simulation of a simplified HOPPY-like hopper with official HOPPY CAD visual integration.
+A MuJoCo simulation of the official HOPPY robot (CAD model) hopping with real
+physics and a hybrid controller, using the official nominal motor parameters.
 ```
 
 The strongest technical points are:
 
 ```text
-hybrid FLIGHT/STANCE control
-contact-based transitions
-Jacobian-based stance push
-torque saturation
-logged plots
-official CAD visual integration
+official nominal motor parameters (armature, damping, torque limits)
+hard foot-ground contact with touchdown/lift-off detection
+hybrid FLIGHT/STANCE control with contact-based transitions
+Cartesian transposed-Jacobian PD in flight, Bezier GRF profile in stance
+encoder-emulated velocity estimation (no raw qvel feedback)
+continuous laps around the gantry
+counterweight vs no-counterweight comparison
 ```
 
-The main limitation to state clearly is:
+The main simplification to state clearly is:
 
 ```text
-The CAD geometry improves the visual model, but the physical simulation still uses simplified dynamics and collision geometry.
+Contact uses simple collision geometry (foot sphere + leg capsule) aligned
+with the CAD meshes; the meshes themselves are visual only. Masses, inertias
+and motor constants come from the official HOPPY nominal parameters.
 ```

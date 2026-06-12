@@ -4,7 +4,7 @@ Documento de coordinacion del equipo. Resume de donde partimos, que ya esta
 hecho, que falta y el plan por fases, mapeado a la rubrica. Se actualiza cada
 vez que avanzamos para tener claro que decir en la presentacion y que sigue.
 
-Ultima actualizacion: 11 de junio 2026.
+Ultima actualizacion: 12 de junio 2026.
 
 ## Punto de partida (lo que habia hoy)
 
@@ -35,14 +35,15 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
 - [x] Simulaciones comparativas (tools/compare_actuator.py -> grafica
       results/plots/cad_comparison_height.png). Corre el mismo salto toggleando
       cada efecto y mide el pico de altura del cuerpo:
-        baseline (todo realista) ....... 0.393 m
-        sin armature ................... 0.590 m  (sin inercia de rotor sube)
-        sin damping .................... 0.489 m  (sin perdidas back-EMF sube)
-        sin resorte de rodilla ......... 0.440 m  (efecto leve)
-        sin saturacion (+-35 Nm) ....... 0.618 m  (con mas torque sube)
-      Analisis: cada efecto realista (armature, damping, saturacion) BAJA el
-      salto hacia lo fisico; el baseline es el mas bajo porque tiene todos los
-      limitantes activos. Es la validacion del modelo de actuador.
+        baseline (todo realista) ....... 0.404 m
+        sin armature ................... 0.519 m  (sin inercia de rotor sube)
+        sin damping .................... 0.442 m  (sin perdidas back-EMF sube)
+        sin resorte de rodilla ......... 0.394 m  (SIN resorte salta MENOS)
+        sin saturacion (+-35 Nm) ....... 0.620 m  (con mas torque sube)
+      Analisis: armature y saturacion son los limitantes dominantes del salto.
+      Quitar el resorte BAJA el pico: el resorte paralelo si almacena y libera
+      energia en el ciclo (justo lo que pide la rubrica 1.4). Es la validacion
+      del modelo de actuador.
 
 ### Fase 3 - Contacto pie-suelo (15 pts) -- completa
 - [x] Contacto duro configurado y justificado (foot + floor):
@@ -65,18 +66,31 @@ Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
       contacto pasado MIN_STANCE, o tope MAX_STANCE. Robusto a rebotes de contacto
       por las guardas de tiempo minimo.
 
-### Fase 4 - Maquina de estados y control hibrido (40 pts) -- parcial
+### Fase 4 - Maquina de estados y control hibrido (40 pts) -- completa
 - [x] Bucle a 1 kHz y maquina FLIGHT/STANCE basada en contacto.
-- [x] Control cartesiano en vuelo (Jacobiano transpuesto, PD).
-- [x] Control de fuerza en apoyo (GRF via Jacobiano transpuesto), con componente horizontal tangencial para avance alrededor del pilar.
-- [ ] Subir la energia del salto. Diagnostico: subir la fuerza de empuje NO
-      sube el salto (el pitch del boom se topa en ~0.054 rad, el cuerpo sube
-      ~4 cm con cualquier fuerza). El problema es que la pierna se extiende y
-      pierde contacto antes de transferir impulso al boom -> rebotes rapidos y
-      bajos. Hay que rediseniar el control de stance: mantener contacto mientras
-      se acelera el cuerpo, con perfil de fuerza Bezier sobre ~0.15 s y timing
-      de la maquina de estados acorde.
+- [x] Control cartesiano REAL en vuelo (formula de la rubrica 4.3):
+      tau = J^T * Kp * (pd - p) - Kd * qdot_estimada, con pd = posicion del pie
+      de la pose de referencia a la actitud actual del gantry (FK). Se agrega
+      un PD articular debil de postura porque cadera y rodilla mueven el pie
+      casi en la misma direccion en la pose de vuelo (J^T J casi singular) y el
+      J^T solo deja una direccion articular sin rigidez. Antes el vuelo era PD
+      articular puro; ahora coincide con lo que pide la rubrica.
+- [x] Control de fuerza en apoyo (GRF via Jacobiano transpuesto), con
+      componente horizontal tangencial para avance alrededor del pilar. El
+      empuje GRF ahora se aplica SOLO con contacto real (gating): antes el
+      perfil Bezier seguia "empujando" en el aire por las guardas de tiempo
+      (el contacto real dura ~25 ms pero MIN_STANCE retiene el estado 120 ms),
+      lo que latigueaba la pierna y los impactos inelasticos lo rectificaban
+      en rotacion hacia atras.
+- [x] Energia del salto resuelta: saltos sostenidos con pico estable ~0.40 m
+      y vuelos de ~0.6 s (tools/eval_cad_hop.py).
 - [x] Perfil de fuerza Bezier en stance, transicion suave alpha de 10 ms y PD de pierna mas fuerte en el CAD.
+- [x] Rotacion continua del yaw lograda: se elimino el tope range="-3.14 3.14"
+      de joint1 que venia del export URDF. El "estancamiento a media vuelta"
+      era el robot chocando con ese limite y rebotando, NO fisica del impacto.
+      El simulador MATLAB oficial no tiene limite de posicion en el yaw (el
+      HOPPY real da vueltas alrededor de su base). Con el tope fuera, el robot
+      da vueltas completas (+372 grados en 15 s, monotonicidad de yaw 1.000).
 
 ### Fase 5 - Sensores y procesamiento (15 pts) -- completa
 - [x] Emulacion de encoder goBilda 5202: joint3/joint4 cuantizados a
@@ -129,12 +143,14 @@ El profe quiere ver el modelo real saltando. Pasos:
        controlador CAD usa perfil de fuerza Bezier de 0.15 s, alpha de 10 ms y
        PD fuerte de pierna. Tambien se alineo la colision del pie con el
        extremo visual de Link4 y se agrego una capsula delgada de pierna baja.
-       El stance incluye warmup de 1.0 s para evitar el lanzon inicial. En 6 s
-       reporta 11 vuelos reales (>0.10 s), startup_qvel_max ~4.71 rad/s,
-       first_hop_peak ~0.384 m, steady_peak ~0.330 m, yaw_progress ~2.36 rad,
-       monotonicidad de yaw 1.000, mesh_min_z ~0.112 m,
-       estable y dentro de torque. El pie sigue siendo el contacto dominante
-       frente a la capsula de pierna.
+       El stance incluye warmup de 1.0 s que rampea el empuje Bezier para
+       evitar el lanzon inicial; el PD de postura corre a fuerza completa desde
+       t=0 (la antigua fuerza de settle de 210 N se elimino: no aportaba nada
+       al arranque del CW y al no-cw le cranqueaba la cadera). En 6 s
+       reporta 8 vuelos reales (>0.10 s, ~0.6 s cada uno), first_hop_peak
+       ~0.369 m, steady_peak ~0.401 m, yaw_progress ~2.41 rad, monotonicidad
+       de yaw 1.000, mesh_min_z ~0.112 m, estable y dentro de torque. El pie
+       sigue siendo el contacto dominante frente a la capsula de pierna.
 5. [x] Sensores y graficas (Fase 5): el controlador CAD usa velocidad estimada
        desde encoder cuantizado; `src/run_cad_logged.py` genera el CSV y las
        graficas de la rubrica en `results/`.
@@ -175,15 +191,21 @@ arriba; ya probado y funciona. Para grabar mp4 se usan los renders offscreen.
   un bug; es el resorte de HOPPY (diseno/rubrica). Se bajo la rigidez de 2.0 a
   1.0 (valor estimado) para reducir el rebote ~33% sin afectar el salto; no se
   elimina del todo porque es la naturaleza del resorte.
-- Vueltas: el robot gira ~media vuelta (~180 grados, visible en el demo) y luego
-  se estanca. La rotacion continua no se logra con tuning simple: la fuerza
-  tangencial se acopla con la orientacion del plano de la pierna y se anula a la
-  media vuelta. Rotacion continua = trabajo futuro de control (control de
-  velocidad de yaw, no solo una fuerza tangencial). La camara del render/visor
-  se subio (elevation -28) para que la pierna se vea girando y no se esconda
-  tras la base.
+- Vueltas: RESUELTO. El "estancamiento a media vuelta" era el tope
+  range="-3.14 3.14" del joint de yaw heredado del export URDF: el robot
+  chocaba con el limite en pi y rebotaba. El gantry real no tiene tope (el
+  simulador MATLAB oficial tampoco), asi que se quito y ahora da vueltas
+  completas y continuas. La camara del render/visor se subio (elevation -28)
+  para que la pierna se vea girando y no se esconda tras la base.
+- La version --no-cw (sin contrapeso) avanza poco y a tirones, con vaivenes
+  de yaw de hasta ~5 grados. Es el comportamiento esperado del boom
+  pierna-pesado: los saltos son diminutos (~0.1 s de aire), el ciclo de la
+  maquina de estados queda al limite del contacto real y los impactos
+  inelasticos borran el momento angular en cada aterrizaje. Justo el punto de
+  la demo: sin contrapeso el sistema no salta bien.
 
 ## Decisiones abiertas
 
-- Conseguir el datasheet del RS-555 para usar Ir exacto (hoy es estimado).
-- Rediseno de control para vueltas continuas (si se quiere para una v2).
+- Ninguna tecnica pendiente. Ir ya es el nominal oficial (7e-6, get_params.m)
+  y las vueltas continuas ya estan resueltas (era el tope del joint de yaw).
+  Lo que queda es el reporte y la presentacion.
