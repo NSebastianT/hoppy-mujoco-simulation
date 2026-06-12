@@ -1,213 +1,217 @@
-# Bitacora del proyecto HOPPY (MuJoCo)
+# HOPPY project log (MuJoCo)
 
-Documento de coordinacion del equipo. Resume de donde partimos, que ya esta
-hecho, que falta y el plan por fases, mapeado a la rubrica. Se actualiza cada
-vez que avanzamos para tener claro que decir en la presentacion y que sigue.
+Team coordination document. Summarizes where we started, what is done, what is
+left and the phase plan, mapped to the rubric. Updated every time we make
+progress, so it is clear what to say in the presentation and what comes next.
 
-Ultima actualizacion: 12 de junio 2026.
+Last update: June 12, 2026.
 
-## Punto de partida (lo que habia hoy)
+## Starting point
 
-- `main` tenia la simulacion del salto con el controlador hibrido funcionando
-  sobre un modelo simplificado de capsulas (`models/hoppy.xml`), con 3 DoF
-  (pitch, cadera, rodilla).
-- El CAD oficial estaba colocado a mano encima del modelo y no ensamblaba bien.
-- En el camino se habian perdido cosas de la rubrica (resorte de rodilla, config
-  de solver recomendada) y los valores de actuador no estaban justificados.
+- `main` had the hopping simulation with the hybrid controller working on a
+  simplified capsule model (`models/hoppy.xml`), with 3 DoF (pitch, hip, knee).
+- The official CAD was placed by hand on top of the model and did not assemble
+  correctly.
+- Along the way some rubric items had been lost (knee spring, recommended
+  solver config) and the actuator values were not justified.
 
-## Estado por fase (rubrica, 100 puntos)
+## Status per phase (rubric, 100 points)
 
-Leyenda: [x] hecho, [~] parcial, [ ] pendiente.
+Legend: [x] done, [~] partial, [ ] pending.
 
-### Fase 1 - Modelo mecanico (20 pts) -- completa
-- [x] 4 DoF: yaw + pitch pasivos, cadera + rodilla activos.
-- [x] Solver recomendado: RK4, Newton, timestep 1 ms (1 kHz), iterations 50,
+### Phase 1 - Mechanical model (20 pts) -- complete
+- [x] 4 DoF: yaw + pitch passive, hip + knee active.
+- [x] Recommended solver: RK4, Newton, timestep 1 ms (1 kHz), iterations 50,
       tolerance 1e-8.
-- [x] Resorte paralelo de rodilla (stiffness 2.0, springref -0.7).
-- [x] Armature = N^2*Ir en cadera y rodilla, con valores del motor real.
-- [x] Damping equivalente back-EMF = (kv*kt/Rw)*N^2.
-- [x] Contrapeso en el extremo opuesto del gantry.
+- [x] Knee parallel spring (stiffness 1.0, springref 0; lowered from 2.0 to
+      calm the in-flight bounce without losing its energy-storage role).
+- [x] Armature = N^2*Ir on hip and knee, with the real motor values.
+- [x] Equivalent back-EMF damping = (kv*kt/Rw)*N^2.
+- [x] Counterweight on the opposite end of the gantry.
 
-### Fase 2 - Restricciones del actuador (10 pts) -- completa
-- [x] Saturacion de torque del motor aplicada en el modelo y el controlador:
-      ±12.2 N·m (cadera) y ±13 N·m (rodilla), del pico de 30 A del driver
-      (0.405 N·m/A a la salida). Antes estaba en ±35, irreal.
-- [x] Simulaciones comparativas (tools/compare_actuator.py -> grafica
-      results/plots/cad_comparison_height.png). Corre el mismo salto toggleando
-      cada efecto y mide el pico de altura del cuerpo:
-        baseline (todo realista) ....... 0.404 m
-        sin armature ................... 0.519 m  (sin inercia de rotor sube)
-        sin damping .................... 0.442 m  (sin perdidas back-EMF sube)
-        sin resorte de rodilla ......... 0.394 m  (SIN resorte salta MENOS)
-        sin saturacion (+-35 Nm) ....... 0.620 m  (con mas torque sube)
-      Analisis: armature y saturacion son los limitantes dominantes del salto.
-      Quitar el resorte BAJA el pico: el resorte paralelo si almacena y libera
-      energia en el ciclo (justo lo que pide la rubrica 1.4). Es la validacion
-      del modelo de actuador.
+### Phase 2 - Actuator constraints (10 pts) -- complete
+- [x] Motor torque saturation applied in the model and the controller:
+      +-12.2 N*m (hip) and +-13 N*m (knee), from the 30 A driver peak
+      (0.405 N*m/A at the output). It used to be +-35, unrealistic.
+- [x] Comparison simulations (tools/compare_actuator.py -> plot
+      results/plots/cad_comparison_height.png). Runs the same hop toggling
+      each effect and measures the body height peak:
+        baseline (all realistic) ....... 0.404 m
+        no armature .................... 0.519 m  (no rotor inertia, jumps higher)
+        no damping ..................... 0.442 m  (no back-EMF losses, higher)
+        no knee spring ................. 0.394 m  (WITHOUT the spring it jumps LESS)
+        no saturation (+-35 Nm) ........ 0.620 m  (more torque, higher)
+      Analysis: armature and saturation are the dominant limits on the hop.
+      Removing the spring LOWERS the peak: the parallel spring does store and
+      release energy in the cycle (exactly what rubric 1.4 asks for). This is
+      the validation of the actuator model.
 
-### Fase 3 - Contacto pie-suelo (15 pts) -- completa
-- [x] Contacto duro configurado y justificado (foot + floor):
-        solref = "0.01 1"  -> constante de tiempo 10 ms, razon de amortiguamiento
-                              1 (criticamente amortiguado): contacto rapido y sin
-                              rebote artificial.
-        solimp = "0.95 0.99 0.001" -> impedancia alta (rigido), poca compliance.
-        friction = "1.5 0.02 0.001" -> friccion tangencial alta -> minimo
-                              deslizamiento no deseado.
-- [x] Calidad de contacto medida (6 s de salto): penetracion maxima de la esfera
-      de colision ~18 mm (es invisible; la malla visible de la pierna se queda
-      >0.11 m sobre el piso, no se ve hundida); deslizamiento del pie en contacto
-      bajo (~0.18 m/s medio, casi todo es el avance tangencial intencional de las
-      vueltas, no slip); fuerza normal suave (pico ~256 N) sin multi-rebote por
-      aterrizaje. Endurecer mas solref/solimp no reduce la penetracion (es la
-      esfera chica en el impacto, no compliance).
-- [x] Criterio touchdown/liftoff: touchdown = par de geoms pie(o capsula de
-      pierna)-piso en contacto via los contactos de MuJoCo, con guarda de tiempo
-      minimo de vuelo (MIN_FLIGHT) para evitar chattering; liftoff = se pierde el
-      contacto pasado MIN_STANCE, o tope MAX_STANCE. Robusto a rebotes de contacto
-      por las guardas de tiempo minimo.
+### Phase 3 - Foot-ground contact (15 pts) -- complete
+- [x] Hard contact configured and justified (foot + floor):
+        solref = "0.01 1"  -> 10 ms time constant, damping ratio 1
+                              (critically damped): fast contact without
+                              artificial bouncing.
+        solimp = "0.95 0.99 0.001" -> high impedance (stiff), little compliance.
+        friction = "1.5 0.02 0.001" -> high tangential friction -> minimal
+                              unwanted slipping.
+- [x] Contact quality measured (6 s of hopping): max penetration of the
+      collision sphere ~18 mm (it is invisible; the visible leg mesh stays
+      >0.11 m above the floor, never looks sunk); low foot slip in contact
+      (~0.18 m/s mean, almost all of it the intentional tangential travel of
+      the laps, not slip); smooth normal force (peak ~256 N) without
+      multi-bounce landings. Hardening solref/solimp further does not reduce
+      the penetration (it is the small sphere at impact, not compliance).
+- [x] Touchdown/liftoff criterion: touchdown = foot (or leg capsule)-floor
+      geom pair present in the MuJoCo contacts, with a minimum flight time
+      guard (MIN_FLIGHT) against chattering; liftoff = contact lost after
+      MIN_STANCE, or the MAX_STANCE cap. Robust to contact bounces thanks to
+      the minimum time guards.
 
-### Fase 4 - Maquina de estados y control hibrido (40 pts) -- completa
-- [x] Bucle a 1 kHz y maquina FLIGHT/STANCE basada en contacto.
-- [x] Control cartesiano REAL en vuelo (formula de la rubrica 4.3):
-      tau = J^T * Kp * (pd - p) - Kd * qdot_estimada, con pd = posicion del pie
-      de la pose de referencia a la actitud actual del gantry (FK). Se agrega
-      un PD articular debil de postura porque cadera y rodilla mueven el pie
-      casi en la misma direccion en la pose de vuelo (J^T J casi singular) y el
-      J^T solo deja una direccion articular sin rigidez. Antes el vuelo era PD
-      articular puro; ahora coincide con lo que pide la rubrica.
-- [x] Control de fuerza en apoyo (GRF via Jacobiano transpuesto), con
-      componente horizontal tangencial para avance alrededor del pilar. El
-      empuje GRF ahora se aplica SOLO con contacto real (gating): antes el
-      perfil Bezier seguia "empujando" en el aire por las guardas de tiempo
-      (el contacto real dura ~25 ms pero MIN_STANCE retiene el estado 120 ms),
-      lo que latigueaba la pierna y los impactos inelasticos lo rectificaban
-      en rotacion hacia atras.
-- [x] Energia del salto resuelta: saltos sostenidos con pico estable ~0.40 m
-      y vuelos de ~0.6 s (tools/eval_cad_hop.py).
-- [x] Perfil de fuerza Bezier en stance, transicion suave alpha de 10 ms y PD de pierna mas fuerte en el CAD.
-- [x] Rotacion continua del yaw lograda: se elimino el tope range="-3.14 3.14"
-      de joint1 que venia del export URDF. El "estancamiento a media vuelta"
-      era el robot chocando con ese limite y rebotando, NO fisica del impacto.
-      El simulador MATLAB oficial no tiene limite de posicion en el yaw (el
-      HOPPY real da vueltas alrededor de su base). Con el tope fuera, el robot
-      da vueltas completas (+372 grados en 15 s, monotonicidad de yaw 1.000).
+### Phase 4 - State machine and hybrid control (40 pts) -- complete
+- [x] 1 kHz loop and contact-based FLIGHT/STANCE machine.
+- [x] REAL Cartesian control in flight (rubric formula 4.3):
+      tau = J^T * Kp * (pd - p) - Kd * qdot_estimated, with pd = the foot
+      position of the reference pose at the current gantry attitude (FK). A
+      weak joint posture PD is added because hip and knee move the foot in
+      nearly the same direction at the flight pose (J^T J close to singular)
+      and J^T alone leaves one joint direction without stiffness. Flight used
+      to be pure joint-space PD; now it matches what the rubric asks for.
+- [x] Force control in stance (GRF via transposed Jacobian), with a tangential
+      horizontal component to travel around the pillar. The GRF push is now
+      applied ONLY during real contact (gating): before, the Bezier profile
+      kept "pushing" in the air because of the time guards (real contact lasts
+      ~25 ms but MIN_STANCE holds the state 120 ms), which whipped the leg and
+      the inelastic impacts rectified it into backwards rotation.
+- [x] Hop energy solved: sustained hops with a steady peak of ~0.40 m and
+      ~0.6 s flights (tools/eval_cad_hop.py).
+- [x] Bezier force profile in stance, 10 ms alpha blend and a stronger leg PD
+      on the CAD.
+- [x] Continuous yaw rotation achieved: removed the range="-3.14 3.14" stop on
+      joint1 that came from the URDF export. The "stalling at half a turn" was
+      the robot hitting that limit and bouncing back, NOT impact physics. The
+      official MATLAB simulator has no yaw position limit (the real HOPPY laps
+      its base). With the stop gone the robot does full laps (+372 degrees in
+      15 s, yaw monotonicity 1.000).
 
-### Fase 5 - Sensores y procesamiento (15 pts) -- completa
-- [x] Emulacion de encoder goBilda 5202: joint3/joint4 cuantizados a
-      751.8 cuentas/rev en el eje de salida.
-- [x] Estimacion de velocidad por derivada numerica filtrada; el PD del CAD ya
-      no usa `qvel` directo para el feedback de velocidad.
-- [x] Logging del CAD en `results/logs/cad_states.csv` y graficas regenerables
-      en `results/plots/` con posiciones, velocidades, contacto, torques y
-      estado hibrido.
+### Phase 5 - Sensors and signal processing (15 pts) -- complete
+- [x] goBilda 5202 encoder emulation: joint3/joint4 quantized to 751.8
+      counts/rev at the output shaft.
+- [x] Velocity estimated by filtered numerical derivative; the CAD PD no
+      longer uses raw `qvel` for velocity feedback.
+- [x] CAD logging to `results/logs/cad_states.csv` and regenerable plots in
+      `results/plots/` with positions, velocities, contact, torques and the
+      hybrid state.
 
-## Datos del motor (para el reporte)
+## Motor data (for the report)
 
-goBilda 5202 Series Yellow Jacket, relacion 26.9:1 (parte 5202-2402-0027), base
-RS-555, driver Pololu VNH5019 a 12 V (BOM del equipo).
+goBilda 5202 Series Yellow Jacket, 26.9:1 ratio (part 5202-2402-0027), RS-555
+base, Pololu VNH5019 driver at 12 V (team BOM).
 
-- Velocidad libre 223 RPM, corriente libre 0.25 A.
-- Par de stall 3.73 N·m, corriente de stall 9.2 A.
+- Free speed 223 RPM, free current 0.25 A.
+- Stall torque 3.73 N*m, stall current 9.2 A.
 - Rw = V/Istall = 12/9.2 = 1.30 ohm.
-- VALORES NOMINALES OFICIALES (de HOPPY-Project/Simulator_MATLAB/get_params.m y
-  "List of nominal parameters.pdf", ya no estimados):
-  kt = 0.0135 N·m/A, kv = 0.0186 V·s/rad, Ir = 7e-6 kg·m^2.
-- N_cadera = 26.9, N_rodilla = 28.8. V_max = 12 V, I_max = 30 A (pico del driver).
-- armature = N^2*Ir -> 0.00507 (cadera), 0.00581 (rodilla).
-- damping = (kv*kt/Rw)*N^2 -> 0.140 (cadera), 0.160 (rodilla).
-- Torque pico = kt*N*I_max -> ~11-12 N·m; usamos saturacion +-12.2/13 N·m.
+- OFFICIAL NOMINAL VALUES (from HOPPY-Project/Simulator_MATLAB/get_params.m
+  and "List of nominal parameters.pdf", no longer estimates):
+  kt = 0.0135 N*m/A, kv = 0.0186 V*s/rad, Ir = 7e-6 kg*m^2.
+- N_hip = 26.9, N_knee = 28.8. V_max = 12 V, I_max = 30 A (driver peak).
+- armature = N^2*Ir -> 0.00507 (hip), 0.00581 (knee).
+- damping = (kv*kt/Rw)*N^2 -> 0.140 (hip), 0.160 (knee).
+- Peak torque = kt*N*I_max -> ~11-12 N*m; we saturate at +-12.2/13 N*m.
 
-## Modelos y como correr
+## Models and how to run
 
-Usar siempre el entorno `.venv-py312` (tiene mujoco, imageio y trimesh).
+Always use the `.venv-py312` environment (it has mujoco, imageio and trimesh).
 
-- `models/hoppy.xml`: modelo fisico (capsulas) + controlador. Es el que simula.
-- `models/hoppy_cad_view.xml`: CAD oficial fiel armado del URDF. Solo visual.
-- `models/hoppy_cad_physics.xml`: CAD oficial con FISICA real (colision de pie,
-  actuadores, dinamica de joints). Es el objetivo para la presentacion: el
-  modelo real saltando, no las cajitas. Ya cae y contacta el piso bien; falta
-  portar el controlador y afinar el salto.
+- `models/hoppy_cad_physics.xml`: official CAD with REAL physics (foot
+  collision, actuators, joint dynamics). This is the deliverable and what the
+  simulation runs: the real model hopping.
+- `models/hoppy_cad_view.xml`: faithful official CAD assembled from the URDF.
+  Visual only.
+- `models/hoppy.xml`: simplified physics model (capsules), kept for
+  development and quick tuning.
 
-## Plan para el objetivo final (CAD con fisica saltando)
+## Plan for the final goal (CAD hopping with physics)
 
-El profe quiere ver el modelo real saltando. Pasos:
-1. [x] Modelo CAD con fisica (`hoppy_cad_physics.xml`): colision de pie/piso,
-       motores en cadera/rodilla, armature/damping/resorte. Cae y apoya estable.
-2. [x] Prueba de caida (contacto valido, sin explotar).
-3. [x] Controlador hibrido portado (`src/cad_hop_controller.py`): el CAD SALTA
-       con fisica (pie sube ~0.2 m, boom pitchea, estable). Esta es la version
-       que se puede mostrar al profe: el modelo real saltando.
-4. [x] Afinar el salto del CAD. El contrapeso visible se elimino y se plego
-       en el inercial de Link2 (masa 3.87654 kg, COM x=0.06075 m), dejando el
-       bias de joint2 alrededor de -1.2 N*m sin bloques flotantes. El
-       controlador CAD usa perfil de fuerza Bezier de 0.15 s, alpha de 10 ms y
-       PD fuerte de pierna. Tambien se alineo la colision del pie con el
-       extremo visual de Link4 y se agrego una capsula delgada de pierna baja.
-       El stance incluye warmup de 1.0 s que rampea el empuje Bezier para
-       evitar el lanzon inicial; el PD de postura corre a fuerza completa desde
-       t=0 (la antigua fuerza de settle de 210 N se elimino: no aportaba nada
-       al arranque del CW y al no-cw le cranqueaba la cadera). En 6 s
-       reporta 8 vuelos reales (>0.10 s, ~0.6 s cada uno), first_hop_peak
-       ~0.369 m, steady_peak ~0.401 m, yaw_progress ~2.41 rad, monotonicidad
-       de yaw 1.000, mesh_min_z ~0.112 m, estable y dentro de torque. El pie
-       sigue siendo el contacto dominante frente a la capsula de pierna.
-5. [x] Sensores y graficas (Fase 5): el controlador CAD usa velocidad estimada
-       desde encoder cuantizado; `src/run_cad_logged.py` genera el CSV y las
-       graficas de la rubrica en `results/`.
-6. [ ] Contacto duro afinado (Fase 3).
-7. [x] Render final del CAD saltando con fisica en `results/renders/cad_hopping.mp4` (no versionado).
+The professor wants to see the real model hopping. Steps:
+1. [x] CAD model with physics (`hoppy_cad_physics.xml`): foot/floor collision,
+       hip/knee motors, armature/damping/spring. Falls and lands stably.
+2. [x] Drop test (valid contact, nothing blows up).
+3. [x] Hybrid controller ported (`src/cad_hop_controller.py`): the CAD HOPS
+       with physics (foot rises ~0.2 m, boom pitches, stable). This is the
+       version to show the professor: the real model hopping.
+4. [x] CAD hop tuning. The floating counterweight blocks were removed and
+       folded into the Link2 inertia (mass 3.87654 kg, COM x=0.06075 m),
+       leaving the joint2 bias around -1.2 N*m without floating blocks (the
+       visible weights are now two capsules and a clamp drawn at the boom
+       end). The CAD controller uses a 0.15 s Bezier force profile, a 10 ms
+       alpha blend and a strong leg PD. The foot collision was aligned with
+       the visual tip of Link4 and a thin lower-leg capsule was added. Stance
+       includes a 1.0 s warmup that ramps the Bezier push to avoid the initial
+       lunge; the posture PD runs at full strength from t=0 (the old 210 N
+       settle force was removed: it added nothing to the CW startup and it
+       cranked the no-cw hip). In 6 s it reports 8 real flights (>0.10 s,
+       ~0.6 s each), first_hop_peak ~0.369 m, steady_peak ~0.401 m,
+       yaw_progress ~2.41 rad, yaw monotonicity 1.000, mesh_min_z ~0.112 m,
+       stable and inside the torque limits. The foot remains the dominant
+       contact over the leg capsule.
+5. [x] Sensors and plots (Phase 5): the CAD controller uses velocity estimated
+       from the quantized encoder; `src/run_cad_logged.py` generates the CSV
+       and the rubric plots in `results/`.
+6. [x] Hard contact tuned (Phase 3, see the phase section above).
+7. [x] Final render of the CAD hopping with physics in
+       `results/renders/cad_hopping.mp4` (not versioned).
 
-Comandos:
+Commands:
 
-    .venv-py312/bin/python src/cad_hop_controller.py    # CAD con fisica saltando -> results/renders/cad_hopping.mp4
-    .venv-py312/bin/python src/cad_hop_controller.py --no-cw  # version SIN contrapeso (se hunde) -> cad_hopping_nocw.mp4
-    .venv-py312/bin/python src/render_simulation.py     # cajitas saltando -> results/renders/hopping.mp4
-    .venv-py312/bin/python src/render_cad_view.py       # CAD quieto (giro) -> results/renders/cad_view.mp4
-    .venv-py312/bin/python src/run_logged_simulation.py # log y graficas en results/
-    .venv-py312/bin/python src/run_cad_logged.py        # CSV y graficas del CAD -> results/logs y results/plots
+    .venv-py312/bin/python src/cad_hop_controller.py    # CAD hopping with physics -> results/renders/cad_hopping.mp4
+    .venv-py312/bin/python src/cad_hop_controller.py --no-cw  # WITHOUT counterweight (it sinks) -> cad_hopping_nocw.mp4
+    .venv-py312/bin/python src/render_simulation.py     # capsule model hopping -> results/renders/hopping.mp4
+    .venv-py312/bin/python src/render_cad_view.py       # static CAD (spin) -> results/renders/cad_view.mp4
+    .venv-py312/bin/python src/run_logged_simulation.py # simplified model logs and plots in results/
+    .venv-py312/bin/python src/run_cad_logged.py        # CAD CSV and plots -> results/logs and results/plots
 
-Demo EN VIVO del CAD saltando (ventana interactiva de MuJoCo):
+LIVE demo of the CAD hopping (interactive MuJoCo window):
 
     # Windows / macOS:
     .venv-py312/bin/python src/view_cad_hop.py
 
-    # Linux (hay que forzar la NVIDIA; con Intel Xe el visor crashea):
+    # Linux (force the NVIDIA GPU; the viewer crashes on Intel Xe):
     __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia .venv-py312/bin/python src/view_cad_hop.py
 
-El visor interactivo abre ventana GLFW. En Linux con el GL de Intel Xe crashea,
-por eso en Linux se fuerza la GPU NVIDIA (PRIME offload) con las variables de
-arriba; ya probado y funciona. Para grabar mp4 se usan los renders offscreen.
+The interactive viewer opens a GLFW window. On Linux it crashes on the Intel
+Xe GL, so on Linux the NVIDIA GPU is forced (PRIME offload) with the variables
+above; tested and working. For recording mp4 use the offscreen renders.
 
-## Ramas
+## Branches
 
-- `develop`: integracion. `main`: entrega.
-- `rubric-physics`: fases de fisica (rama actual de trabajo).
-- `cad-in-action`: animacion cinematica del CAD (preview, sin merge todavia).
+- `develop`: integration. `main`: delivery.
+- `rubric-physics`: physics phases (current working branch).
+- `cad-in-action`: kinematic CAD animation (preview, not merged).
 
-## Limitaciones conocidas
+## Known limitations
 
-- Rebote de rodilla en vuelo: practicamente RESUELTO en el modelo con
-  contrapeso (el que se presenta). Con el PD cartesiano de vuelo la oscilacion
-  de rodilla en el aire quedo en ~0.5 grados pico a pico (imperceptible).
-  Historial: el resorte paralelo real (jala a springref=0) peleaba con el PD
-  articular viejo; se bajo la rigidez de 2.0 a 1.0 y el control cartesiano
-  termino de calmarlo. En la version --no-cw queda un twitch puntual de rodilla
-  en sus saltitos cortos (resorte + encoder), inherente a esa variante.
-- Vueltas: RESUELTO. El "estancamiento a media vuelta" era el tope
-  range="-3.14 3.14" del joint de yaw heredado del export URDF: el robot
-  chocaba con el limite en pi y rebotaba. El gantry real no tiene tope (el
-  simulador MATLAB oficial tampoco), asi que se quito y ahora da vueltas
-  completas y continuas. La camara del render/visor se subio (elevation -28)
-  para que la pierna se vea girando y no se esconda tras la base.
-- La version --no-cw (sin contrapeso) avanza poco y a tirones, con vaivenes
-  de yaw de hasta ~5 grados. Es el comportamiento esperado del boom
-  pierna-pesado: los saltos son diminutos (~0.1 s de aire), el ciclo de la
-  maquina de estados queda al limite del contacto real y los impactos
-  inelasticos borran el momento angular en cada aterrizaje. Justo el punto de
-  la demo: sin contrapeso el sistema no salta bien.
+- Knee bounce in flight: practically SOLVED on the counterweight model (the
+  one we present). With the Cartesian flight PD the in-air knee oscillation is
+  ~0.5 degrees peak to peak (imperceptible). History: the real parallel spring
+  (pulls to springref=0) fought the old joint-space PD; the stiffness was
+  lowered from 2.0 to 1.0 and the Cartesian control finished calming it. The
+  --no-cw variant keeps a brief knee twitch in its short hops (spring +
+  encoder), inherent to that variant.
+- Laps: SOLVED. The "stalling at half a turn" was the range="-3.14 3.14" stop
+  on the yaw joint inherited from the URDF export: the robot hit the limit at
+  pi and bounced back. The real gantry has no stop (neither does the official
+  MATLAB simulator), so it was removed and the robot now does full continuous
+  laps. The render/viewer camera was raised (elevation -28) so the leg can be
+  seen going around instead of hiding behind the base.
+- The --no-cw variant (no counterweight) advances slowly and in small jerks,
+  with yaw swings of up to ~5 degrees. That is the expected behavior of the
+  leg-heavy boom: hops are tiny (~0.1 s of air), the state machine cycle runs
+  at the edge of the real contact, and the inelastic impacts erase the angular
+  momentum on every landing. Exactly the point of the demo: without the
+  counterweight the system cannot hop well.
 
-## Decisiones abiertas
+## Open decisions
 
-- Ninguna tecnica pendiente. Ir ya es el nominal oficial (7e-6, get_params.m)
-  y las vueltas continuas ya estan resueltas (era el tope del joint de yaw).
-  Lo que queda es el reporte y la presentacion.
+- No technical items pending. Ir is the official nominal value (7e-6,
+  get_params.m) and the continuous laps are solved (it was the yaw joint
+  stop). What remains is the report and the presentation.
